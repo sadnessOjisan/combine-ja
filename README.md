@@ -1,3 +1,3 @@
 # combine-ja
 
-Translation combine wiki in Japanese.
+Translation [combine](https://github.com/Marwes/combine) wiki in Japanese.
