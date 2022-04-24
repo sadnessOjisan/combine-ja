@@ -206,11 +206,17 @@ The output of each of these parsers is the `char` they have matched.
 
 マッチした文字を無視したい場合は、 `repeat::skip_*` 関数を使用できます。
 
-- `skip_many(space())` - 0 or more whitespace characters (same as `char::spaces()`)
-- `skip_many1(space())` - 1 or more whitespace characters
-- `skip_count(4, space())` - exactly 4 whitespace characters
-- `skip_count_min_max(1, 4, space())` - 1 to 4 whitespace characters
-- `skip_until(item::satisfy(|c| c != '\n'))` - everything until the end of line
+> - `skip_many(space())` - 0 or more whitespace characters (same as `char::spaces()`)
+> - `skip_many1(space())` - 1 or more whitespace characters
+> - `skip_count(4, space())` - exactly 4 whitespace characters
+> - `skip_count_min_max(1, 4, space())` - 1 to 4 whitespace characters
+> - `skip_until(item::satisfy(|c| c != '\n'))` - everything until the end of line
+
+- `skip_many(space())` - 0 個以上の空白文字列 (`char::spaces()`と同じ)
+- `skip_many1(space())` - 1 個以上の空白文字列
+- `skip_count(4, space())` - 4 個の空白文字列
+- `skip_count_min_max(1, 4, space())` - 1〜4 個の空白文字列
+- `skip_until(item::satisfy(|c| c != '\n'))` - 行末まで
 
 > The `skip_*` combinators have the output type `()`, but they nonetheless consume from the input stream.
 
@@ -265,19 +271,18 @@ The output of each of these parsers is the `char` they have matched.
 
 これらの機能の違いはなにか、どのような場合に使うのか。
 
-- `map()` allows you to map the output to another type. For example you can convert a `&str` to a `String`, or move some values from tuple form into a custom struct. The closure is not able to return an error.
-  - `(a(), b()).map(|(a, b)| MyType { a: a, b: b} )`
-  - `recognize(skip_many1(letter())).map(|s| s.to_string())`
-- `and_then()` is the most capable of the three functions. In contrast to `map()`, the closure returns a `Result<>`. Use this if your transformation may fail, for example if you want to parse some digits into a numeric type.
-  - `recognize(skip_many1(digit())).and_then(|digits : &str| digits.parse::<u32>().map_err(StreamErrorFor::<I>::other) )` (This could also be written with [`from_str(recognize(skip_many1(digit())))`][`from_str`])
-  - You can use any constructor of the `error::StreamError` trait to create an error. The most helpful constructors are:
-    - `StreamErrorFor::<I>::other(some_std_error)`
-    - `StreamErrorFor::<I>::message_message(format!("{}", xyz))`
-    - `StreamErrorFor::<I>::message_static_message("Not supported")`
-- `flat_map()` is very similar to `and_then()`, but they differ in the error type the closure must return. Use `flat_map()` if you want to parse some output in more detail with another parser. (see its documentation)
-
-  - `and_then()` takes an `error::StreamError` where as `flat_map()` takes an `error::ParseError`.
-  - `and_then()` will add position information to the error automatically, for `flat_map()` you have to take care of that yourself. You may need to transform the position information.
+> - `map()` allows you to map the output to another type. For example you can convert a `&str` to a `String`, or move some values from tuple form into a custom struct. The closure is not able to return an error.
+>   - `(a(), b()).map(|(a, b)| MyType { a: a, b: b} )`
+>   - `recognize(skip_many1(letter())).map(|s| s.to_string())`
+> - `and_then()` is the most capable of the three functions. In contrast to `map()`, the closure returns a `Result<>`. Use this if your transformation may fail, for example if you want to parse some digits into a numeric type.
+>   - `recognize(skip_many1(digit())).and_then(|digits : &str| digits.parse::<u32>().map_err(StreamErrorFor::<I>::other) )` (This could also be written with [`from_str(recognize(skip_many1(digit())))`][`from_str`])
+>   - You can use any constructor of the `error::StreamError` trait to create an error. The most helpful constructors are:
+>     - `StreamErrorFor::<I>::other(some_std_error)`
+>     - `StreamErrorFor::<I>::message_message(format!("{}", xyz))`
+>     - `StreamErrorFor::<I>::message_static_message("Not supported")`
+> - `flat_map()` is very similar to `and_then()`, but they differ in the error type the closure must return. Use `flat_map()` if you want to parse some output in more detail with another parser. (see its documentation)
+> - `and_then()` takes an `error::StreamError` where as `flat_map()` takes an `error::ParseError`.
+> - `and_then()` will add position information to the error automatically, for `flat_map()` you have to take care of that yourself. You may need to transform the position information.
 
 - `map()` は、出力を別の型にマップすることができます。例えば、 `&str` を `String` に変換したり、タプル型からカスタム構造体に値を移動させたりすることができます。このクロージャはエラーを返すことができません。
   - `(a(), b()).map(|(a, b)| MyType { a: a, b: b} )`
@@ -357,14 +362,23 @@ choice::choice( (
 
 次に、以下のコンビネーターのいずれかを使用して、その要素の複数の出現を集めます。
 
-- `repeat::count(4, hexbyte);` - 0 to 4 hexadecimal bytes
-- `repeat::count_min_max(1, 4, hexbyte)` - 1 to 4 hexadecimal bytes
-- `repeat::many(hexbyte)` - 0 or more hexadecimal bytes
-- `repeat::many1(hexbyte)` - 1 or more hexadecimal bytes
-- `repeat::sep_by(hexbyte, ',')` - 0 or more hexadecimal bytes, separated by `,`
-- `repeat::sep_by1(hexbyte, ',')` - 1 or more hexadecimal bytes, separated by `,`
-- `repeat::sep_end_by(hexbyte, ',')` - 0 or more hexadecimal bytes, all followed by `,`
-- `repeat::sep_end_by1(hexbyte, ',')` - 1 or more hexadecimal bytes, all followed by `,`
+> - `repeat::count(4, hexbyte);` - 0 to 4 hexadecimal bytes
+> - `repeat::count_min_max(1, 4, hexbyte)` - 1 to 4 hexadecimal bytes
+> - `repeat::many(hexbyte)` - 0 or more hexadecimal bytes
+> - `repeat::many1(hexbyte)` - 1 or more hexadecimal bytes
+> - `repeat::sep_by(hexbyte, ',')` - 0 or more hexadecimal bytes, separated by `,`
+> - `repeat::sep_by1(hexbyte, ',')` - 1 or more hexadecimal bytes, separated by `,`
+> - `repeat::sep_end_by(hexbyte, ',')` - 0 or more hexadecimal bytes, all followed by `,`
+> - `repeat::sep_end_by1(hexbyte, ',')` - 1 or more hexadecimal bytes, all followed by `,`
+
+- `repeat::count(4, hexbyte);` - 0 ～ 4 バイトの 16 進数
+- `repeat::count_min_max(1, 4, hexbyte)` - 1 ～ 4 バイトの 16 進数
+- `repeat::many(hexbyte)` - 0 バイト以上の 16 進数
+- `repeat::many1(hexbyte)` - 1 バイト以上の 16 進数
+- `repeat::sep_by(hexbyte, ',')` - `,` で区切られた、0 バイト以上の 16 進数
+- `repeat::sep_by1(hexbyte, ',')` - `,` で区切られた、1 バイト以上の 16 進数
+- `repeat::sep_end_by(hexbyte, ',')` - `,` が付随している、0 バイト以上の 16 進数
+- `repeat::sep_end_by1(hexbyte, ',')` - `,` が付随している、1 バイト以上の 16 進数
 
 > The parser output of each element will be collected into a type that implements `std::iter::Extend<TheNestedParser::Output>` and `std::default::Default`. You can use `Vec`, `HashMap` or `HashSet` for this purpose or even write your own collection. You must always give a type hint, so the combinator knows which collection to use. The best way to do this is to call `.map(|m : Vec<_>| m)` on the collecting combinator.
 
@@ -422,9 +436,9 @@ let output = tools.easy_parse(input).unwrap().0;
 
 ### Miscellaneous
 
-- [`parser1.and(parser2)`][] is a shortcut for `(parser1, parser2)`
-- [`choice::optional`][] can be helpful.
-- [`repeat::escaped`][] helps parsing escaped strings.
+> - [`parser1.and(parser2)`][] is a shortcut for `(parser1, parser2)`
+> - [`choice::optional`][] can be helpful.
+> - [`repeat::escaped`][] helps parsing escaped strings.
 
 - [`parser1.and(parser2)`][] は `(parser1, parser2)`のショートカットです。
 - [`choice::optional`][] は便利です。
