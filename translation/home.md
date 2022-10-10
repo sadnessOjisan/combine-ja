@@ -1,14 +1,12 @@
 
-## What is combine?
+## combine とは何か
 
-`combine` is a parser combinator library. Let's explain that in two steps.
+`combine` はパーサーコンビネータライブラリです。2つのステップで説明しましょう。
 
-A "parser" is an algorithm that turns a string of input (for example a `&str` or `&[u8]`) into some output (for example `(i32, Vec<i32>)`) according to a grammar.
+パーサーは文法に従って入力を分割し（例えば `&str` or `&[u8]`）、何らかの出力（例えば `(i32, Vec<i32>)`）に変換するアルゴリズムです。
 
-A "combinator" refers to the ability to *combine* multiple smaller parsers
-into a larger one. In `combine` this is done simply by defining and calling
-functions which take one or more parsers as arguments and returns a new
-parser. This is how it looks like:
+「コンビネーター」は、複数の小さなパーサーを組み合わせてより大きなパーサーを作る機能のことです。`combine`
+では1つ以上のパーサーを引数として受け取り、新しいパーサーを返す関数を定義して呼び出すことで実現できます。例えば次の通りです。
 
 ```rust
 # use combine::parser::range::{range, take_while1};
@@ -28,43 +26,41 @@ let output : Vec<&str> = tools.easy_parse(input).unwrap().0;
 ```
 *Listing A-1 - 'Hello combine' example*
 
-`take_while1`, `range` and `sep_by` are parser combinators from the
-`combine` library. `tool` and `tools` are parsers produced from those
-combinators. The latter is also the final parser.
+`take_while1`、`range`、`sep_by`は`combine`ライブラリのパーサーコンビネータです。`tool`と`tools`
+はそれらのコンビネータから生成されたパーサーです。tools は作られた最終的なパーサーでもあります。
 
-## Tutorial
+## チュートリアル
 
-Learn `combine` with the not so quick [Quickstart Tutorial](Tutorial).
+それほど手軽にはいきませんが[クイックスタートチュートリアル](Tutorial)で`combine`を学べます。
 
-## Inner machinery
+## 内部の仕組み
 
-Every parser in every language needs roughly these four things to work:
- - [The data to parse or a way to obtain that data](Input-Machinery)
- - [A definition of the format to parse](Parser-Trait)
- - A way of gathering and returning the information it has found
- - [A way to notify about Errors during parsing](Error-Handling)
+あらゆる言語のあらゆるパーサーには大まかに言ってこれら4つが動作することが必要です。
 
-It may also support one or more of these extra functionalities
- - Resume parsing / streaming of input data
- - Giving location information of input data tokens (e.g. line, column for text input)
+- [パースするデータまたはそのデータの取得方法](Input-Machinery)
+- [パースする形式の定義](Parser-Trait)
+- 見つけた情報を集めて返す方法
+- [パース中のエラーを通知する方法](Error-Handling)
 
-As `combine` attempts to be as flexible as possible in what can be used as
-input there can be quite a few traits to implement but most of the
-high-level use should only need to concern itself with a few of them (namely
-`Stream`, `RangeStream` and `FullRangeStream`, the latter two only for
-zero-copy parsing).
+1つ以上の追加の機能に対応することもあります。
 
-The linked chapters describe the `combine` way of these things and why they
-are the way they are. This helps a lot understanding error messages and
-dealing with sticks and stones.
+- 入力データのパース／ストリーミングの再開
+- 入力データトークンの位置情報の付与（テキスト入力の場合は行や列など）
 
-## Alternatives
+`compine` は入力として使用できるものに対して可能な限り柔軟であろうとするので、実装すべきトレイトは非常に多くなりますが、アプリケーションレベル
+(high-level) で使用する場合は、それらのうちのいくつか
+(`Stream`、`RangeStream`および`FullRangeStream`, 後者2つは zero-copy のパースをする場合のみ)
+を気にすればよいです。
 
-For reference, here are some alternatives in the rust ecosystem:
+リンク先の章ではこれらのことに対する
+`combine`の流儀を説明し、なぜそのようになっているのかを説明します。これは、エラーメッセージの理解に大いに役立ち、出会ってもひるまなくなるでしょう。
+
+## 代替になるライブラリ
+
+参考のために、Rust エコシステムには他の選択肢があります。
 
  - [nom](https://crates.io/crates/nom)
  - [pest](https://crates.io/crates/pest)
  - [lalrpop](https://crates.io/crates/lalrpop)
 
-All parser libraries come with their own trade offs, so choose wisely
-:smile: .
+全てのパーサライブラリにはそれぞれトレードオフがあります。賢く選定しましょう :smile:
