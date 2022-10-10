@@ -1,0 +1,2455 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: github.com/Marwes/combine/wiki VERSION\n"
+"POT-Creation-Date: 2022-10-10 18:59+0900\n"
+"PO-Revision-Date: 2022-10-10 20:08+0900\n"
+"Last-Translator: gemmaro <gemmaro.dev@gmail.com>\n"
+"Language-Team: none\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Title ##
+#: original/Error-Handling.md:1
+#, no-wrap
+msgid "Overview"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:5
+msgid ""
+"`combine`'s default error handling is very simple. Let's look at a simple "
+"example that does not use the `easy` module."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:6
+#, no-wrap
+msgid ""
+"# use combine::parser::char::char;\n"
+"# use combine::parser::Parser;\n"
+"# use combine::error::StringStreamError;\n"
+"\n"
+"assert_eq!(Err(StringStreamError::UnexpectedParse), \n"
+"           char('s').parse(\"e\"));\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:16
+msgid ""
+"The parser expects an 's' literal, but the input is \"e\", so the parser "
+"returns an error. The exact error is `StringStreamError::UnexpectedParse` "
+"which only tells us that we got a parser error somewhere for an unspecified "
+"reason. If we are parsing for example a config file with a syntax error, "
+"this information wouldn't help us at all fixing the config file."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:19
+#, no-wrap
+msgid ""
+"`combine` uses this simple error strategy to support `no_std` environments, but since this is unlikely to be enough for many use-cases its error handling is extensible.\n"
+" The easiest way opt in into more precise error messages by using the aptly named `easy` machinery.\n"
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:20
+#, no-wrap
+msgid ""
+"# use combine::parser::char::char;\n"
+"# use combine::parser::Parser;\n"
+"# use combine::stream::state::State;\n"
+"let result = char('s').easy_parse(State::new(\"e\"));\n"
+"\n"
+"let formatted_err = &format!(\"{}\", result.unwrap_err());\n"
+"\n"
+"assert_eq!(\n"
+"\"Parse error at line: 1, column: 1\n"
+"Unexpected `e`\n"
+"Expected `s`\n"
+"\", formatted_err);\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:36
+msgid ""
+"By using `easy_parse` instead of `parse` we tell `combine` to use the "
+"[`easy::Errors`][] as the error type which gives us much more detailed "
+"information about where the parsing went wrong."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:38
+msgid ""
+"The input data is also wrapped in [`State`][] which further enhances the "
+"error by making the position information line and column based. Otherwise "
+"the position would simply point to some memory address (\"Parse error at "
+"0x55e618410520\"), which would not be reproducible within tests."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:40
+msgid ""
+"For `&[T]` input, or if line and column indication don't make sense for your "
+"application, you can use [`translate_position`][] instead of the `State` "
+"wrapper to map the memory address based position to an offset. By the way: `."
+"parse(easy::Stream(input))` is equivalent to .easy_parse(input)."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:44
+msgid ""
+"[`State`]:https://docs.rs/combine/*/combine/stream/state/struct.State.html "
+"[`easy::Errors`]:https://docs.rs/combine/*/combine/easy/struct.Errors.html "
+"[`translate_position`]:https://docs.rs/combine/*/combine/stream/struct."
+"PointerOffset.html#method.translate_position"
+msgstr ""
+"[`State`]:https://docs.rs/combine/*/combine/stream/state/struct.State.html\n"
+"[`easy::Errors`]:https://docs.rs/combine/*/combine/easy/struct.Errors.html\n"
+"[`translate_position`]:https://docs.rs/combine/*/combine/stream/struct.PointerOffset.html#method.translate_position"
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:45
+#, no-wrap
+msgid ""
+"# use combine::parser::char::char;\n"
+"# use combine::parser::Parser;\n"
+"# use combine::stream::easy;\n"
+"let input = \"e\";\n"
+"let result = char('s').parse(easy::Stream(input)); // same as .easy_parse(input);\n"
+"let result = result.map_err(|e| e.map_position(|p| p.translate_position(input)));\n"
+"\n"
+"let formatted_err = &format!(\"{}\", result.unwrap_err());\n"
+"\n"
+"assert_eq!(\n"
+"\"Parse error at 0\n"
+"Unexpected `e`\n"
+"Expected `s`\n"
+"\", formatted_err );\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:63
+msgid ""
+"[`translate_position`][] requires a reference to original input slice. If "
+"you don't have that because your data source is `Iterator` based, you can "
+"get the same effect by wrapping the input with `State::"
+"with_positioner(input, IndexPositioner)`."
+msgstr ""
+
+#. type: Title ##
+#: original/Error-Handling.md:64
+#, no-wrap
+msgid "The error traits"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:67
+msgid "Its time to look behind the curtain."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:69
+msgid ""
+"As often in the rust world, flexibility is created by using generics, traits "
+"and different implementations for different types."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:71
+msgid ""
+"For errors in `combine`, there are two traits: `error::ParseError` and "
+"`error::StreamError`."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:73
+msgid ""
+"`combine` implements these traits for the following types, but you could add "
+"your own types and implementations as well:"
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:74
+#, no-wrap
+msgid ""
+"impl StreamError for StringStreamError {} \n"
+"impl ParseError  for StringStreamError { type StreamError = Self }\n"
+"\n"
+"impl StreamError for UnexpectedParse   {}\n"
+"impl ParseError  for UnexpectedParse   { type StreamError = Self }\n"
+"\n"
+"impl StreamError for easy::Error       {}\n"
+"impl ParseError  for easy::Error       { type StreamError = Self }\n"
+"\n"
+"impl ParseError  for easy::Errors      { type StreamError = easy::Error }\n"
+"\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:90
+msgid ""
+"How does the parser know which error type to use? The parser trait has an "
+"associated type `Input : Stream`, which itself has the associated type "
+"`Error : ParseError`. Whatever that type is, is used as the actual error "
+"type."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:94
+msgid ""
+"You may ask why the error is defined on the input stream. The answer is, "
+"that the stream methods `uncons()`, `uncons_range()` and `uncons_while()` "
+"need to be able to return errors, too, and it saves a lot of type "
+"boilerplate when the stream and the parser do not need to be generic over "
+"any error."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:100
+msgid ""
+"Note: Since most parsers are generic in terms of their input type (as long "
+"as it is a `Stream`), you can combine any parser with any error stategy and "
+"any input. To select an error strategy, you need to create a wrapper around "
+"the actual `input` that reassigns the associated `Error` type. That wrapper "
+"needs to do some `map_err()` calls in its implementation and that's it. That "
+"is what the input wrapper `easy::Stream` is doing."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:104
+msgid ""
+"Because the parser can access the error type, and the error traits define a "
+"few constructor methods, the parser can create and return new errors when "
+"needed. Some constructors take meta data. It is up to the error type "
+"implementation to store or ignore this meta data."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:106
+msgid "These are the two error traits:"
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:107
+#, no-wrap
+msgid ""
+"trait StreamError<Item, Range>: Sized + PartialEq {\n"
+"\n"
+"    // CONSTRUCTORS\n"
+"\n"
+"    fn unexpected               (info:  Info<Item, Range>) -> Self { ... }\n"
+"    fn unexpected_token         (token: Item)              -> Self;\n"
+"    fn unexpected_range         (token: Range)             -> Self;\n"
+"    fn unexpected_message       (msg:   impl Display)      -> Self;\n"
+"    fn unexpected_static_message(msg:   &'static str)      -> Self { ... }\n"
+"    fn expected                 (info:  Info<Item, Range>) -> Self { ... }\n"
+"    fn expected_token           (token: Item)              -> Self;\n"
+"    fn expected_range           (token: Range)             -> Self;\n"
+"    fn expected_message         (msg:   impl Display)      -> Self;\n"
+"    fn expected_static_message  (msg:   &'static str)      -> Self { ... }\n"
+"    fn message                  (info:  Info<Item, Range>) -> Self { ... }\n"
+"    fn message_token            (token: Item)              -> Self;\n"
+"    fn message_range            (token: Range)             -> Self;\n"
+"    fn message_message          (msg:   impl Display)      -> Self;\n"
+"    fn message_static_message   (msg:   &'static str)      -> Self { ... }\n"
+"    fn end_of_input             ()                         -> Self { ... }\n"
+"    fn other<E>                 (err:   impl StdError + .) -> Self { ... }\n"
+"\n"
+"    // COPY into other StreamError\n"
+"\n"
+"    fn into_other<T>(self) -> T where T: StreamError<Item, Range>;\n"
+"}\n"
+"\n"
+"\n"
+"trait ParseError<Item, Range, Position>: Sized + PartialEq {\n"
+"\n"
+"    type StreamError: StreamError<Item, Range>;\n"
+"\n"
+"    // CONSTRUCTOR\n"
+"\n"
+"    fn empty(position: Position) -> Self;\n"
+"    fn from_error(position: Position, err: Self::StreamError) -> Self;\n"
+"\n"
+"    // COPY into other StreamError\n"
+"\n"
+"    fn into_other<T>(self) -> T where T: ParseError<Item, Range, Position>;\n"
+"\n"
+"    // MODIFICATION\n"
+"\n"
+"    fn set_position(&mut self, position: Position);\n"
+"    fn add(&mut self, err: Self::StreamError);\n"
+"    fn set_expected<F>(self_: &mut Tracked<Self>, info: Self::StreamError, f: F) where F: FnOnce(&mut Tracked<Self>);\n"
+"    fn merge(self, other: Self) -> Self { ... }\n"
+"    fn add_expected(&mut self, info: Info<Item, Range>) { ... }\n"
+"    fn add_unexpected(&mut self, info: Info<Item, Range>) { ... }\n"
+"    fn add_message(&mut self, info: Info<Item, Range>) { ... }\n"
+"    fn clear_expected(&mut self) { ... }\n"
+"\n"
+"    // QUERY\n"
+"\n"
+"    fn is_unexpected_end_of_input(&self) -> bool;\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:167
+msgid "So let's first look at all the constructors of the two error traits."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:171
+msgid ""
+"`StreamError` is able to take information about the type of error (expected/"
+"unexpected/&str) where as `ParseError` is `empty()` at first, but allows "
+"`StreamError`s to be `add()`ed to it. Also note that a `ParseError` has an "
+"associated type `StreamError`. They come in pairs."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:175
+msgid ""
+"The documentation of `StreamError` states: \"`StreamError` represents a "
+"single error returned from a `Stream` or a `Parser`.  Usually multiple "
+"instances of `StreamError` are composed into a `ParseError` to build the "
+"final error value.\""
+msgstr ""
+
+#. type: Title ##
+#: original/Error-Handling.md:176
+#, no-wrap
+msgid "Minimal errors and maximal performance"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:179
+msgid "Now let's look at the implementations:"
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:180
+#, no-wrap
+msgid ""
+"pub enum UnexpectedParse {\n"
+"    Eoi,\n"
+"    Unexpected,\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:188
+msgid ""
+"`UnexpectedParse` is the minimal error type for all input types except "
+"`&str`."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:190
+msgid ""
+"When a new `UnexpectedParse` is contructed, for example with `Error::"
+"unexpected_range(some_range)`, the range information is not used, and the "
+"new error is just a `UnexpectedParse::Unexpected`. The same applies to all "
+"other constructors except for `end_of_input()`, which becomes "
+"`UnexpectedParse::Eoi`. The \"end of input\" error needs special handling "
+"because it is part of the partial parsing machinery. The parser may ask the "
+"error type with `e.is_unexpected_end_of_input()`, if the reason was Eoi. The "
+"Eoi information must be OR-ed when adding adding/merging multiple "
+"`StreamError`s into a `ParseError`."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:191
+#, no-wrap
+msgid ""
+"pub enum StringStreamError {\n"
+"    UnexpectedParse,\n"
+"    Eoi,\n"
+"    CharacterBoundary,\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:201
+msgid ""
+"`StringStreamError` is the minimal error type for `&str` input. It has the "
+"additional variant `CharacterBoundary`. When handling utf-8 encoded data and "
+"taking slices by byte offset, it is possible to create illegal strings. See "
+"[split_at](https://doc.rust-lang.org/std/primitive.str.html#method."
+"split_at ). I will not explain this further because it is mostly an "
+"implementation detail like `Eoi`."
+msgstr ""
+
+#. type: Title ##
+#: original/Error-Handling.md:202
+#, no-wrap
+msgid "Informative errors with `easy`"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:205
+msgid ""
+"That was the default error parsing. Now we take a look what errors are used "
+"when we wrap our input in `easy::Stream`."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:207
+msgid ""
+"Mainly, the inputs associated type `Errors` becomes `easy::Errors`. Because "
+"of convenience, you will see the `easy::ParseError` type instead, but they "
+"are the same."
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:209
+msgid ""
+"All the constructors from the `StreamError` trait map into the respective "
+"variants of `easy::Error`. Multiple errors are collected into the `Vec` "
+"inside of `easy::Errors.` The data structures are all `pub`, so you can "
+"access all the fields for inspection. The error also implements `Display`, "
+"`Debug` and `std::error::Error`."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Error-Handling.md:210
+#, no-wrap
+msgid ""
+"type easy::ParseError<S> = easy::Errors<...... >;\n"
+"\n"
+"// I = input::Item, R = input::Range, P = input::Position\n"
+"pub struct easy::Errors<I, R, P> {  // `ParseError`\n"
+"    pub position: P,\n"
+"    pub errors: Vec<Error<I, R>>,\n"
+"}\n"
+"\n"
+"pub enum easy::Error<T, R> {        // `StreamError`\n"
+"    Unexpected(Info<T, R>),\n"
+"    Expected(Info<T, R>),\n"
+"    Message(Info<T, R>),\n"
+"    Other(Box<dyn StdError + Send + Sync>),\n"
+"}\n"
+"\n"
+"pub enum easy::Info<T, R> {  \n"
+"    Token(T),\n"
+"    Range(R),\n"
+"    Owned(String), // Note: There exists another `Info` without the `Owned` variant\n"
+"    Borrowed(&'static str),\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Error-Handling.md:234
+msgid ""
+"Usage examples were given at the beginning of the error chapter. You may now "
+"understand them better. If you want to implement your own Error type, take a "
+"look at the source code of the `easy` module."
+msgstr ""
+
+#. type: Title ##
+#: original/Home.md:2
+#, no-wrap
+msgid "What is combine?"
+msgstr "combine とは何か"
+
+#. type: Plain text
+#: original/Home.md:5
+msgid ""
+"`combine` is a parser combinator library. Let's explain that in two steps."
+msgstr "`combine` はパーサーコンビネータライブラリです。2つのステップで説明しましょう。"
+
+#. type: Plain text
+#: original/Home.md:7
+#, no-wrap
+msgid "A \"parser\" is an algorithm that turns a string of input (for example a `&str` or `&[u8]`) into some output (for example `(i32, Vec<i32>)`) according to a grammar.\n"
+msgstr "パーサーは文法に従って入力を分割し（例えば `&str` or `&[u8]`）、何らかの出力（例えば `(i32, Vec<i32>)`）に変換するアルゴリズムです。\n"
+
+#. type: Plain text
+#: original/Home.md:9
+msgid ""
+"A \"combinator\" refers to the ability to *combine* multiple smaller parsers "
+"into a larger one. In `combine` this is done simply by defining and calling "
+"functions which take one or more parsers as arguments and returns a new "
+"parser. This is how it looks like:"
+msgstr "「コンビネーター」は、複数の小さなパーサーを組み合わせてより大きなパーサーを作る機能のことです。`combine` では1つ以上のパーサーを引数として受け取り、新しいパーサーを返す関数を定義して呼び出すことで実現できます。例えば次の通りです。"
+
+#. type: Fenced code block (rust)
+#: original/Home.md:10
+#, no-wrap
+msgid ""
+"# use combine::parser::range::{range, take_while1};\n"
+"# use combine::parser::repeat::{sep_by};\n"
+"# use combine::parser::Parser;\n"
+"\n"
+"let input = \"Hammer, Saw, Drill\";\n"
+"\n"
+"// a sequence of alphabetic characters\n"
+"let tool = take_while1(|c : char| c.is_alphabetic());\n"
+"\n"
+"// many `tool`s, separated by \", \"\n"
+"let mut tools = sep_by(tool, range(\", \"));\n"
+"\n"
+"let output : Vec<&str> = tools.easy_parse(input).unwrap().0;\n"
+"// vec![\"Hammer\", \"Saw\", \"Drill\"]\n"
+msgstr ""
+"# use combine::parser::range::{range, take_while1};\n"
+"# use combine::parser::repeat::{sep_by};\n"
+"# use combine::parser::Parser;\n"
+"\n"
+"let input = \"Hammer, Saw, Drill\";\n"
+"\n"
+"// a sequence of alphabetic characters\n"
+"let tool = take_while1(|c : char| c.is_alphabetic());\n"
+"\n"
+"// many `tool`s, separated by \", \"\n"
+"let mut tools = sep_by(tool, range(\", \"));\n"
+"\n"
+"let output : Vec<&str> = tools.easy_parse(input).unwrap().0;\n"
+"// vec![\"Hammer\", \"Saw\", \"Drill\"]\n"
+
+#. type: Plain text
+#: original/Home.md:27
+#, no-wrap
+msgid "*Listing A-1 - 'Hello combine' example*\n"
+msgstr "*Listing A-1 - 'Hello combine' example*\n"
+
+#. type: Plain text
+#: original/Home.md:29
+msgid ""
+"`take_while1`, `range` and `sep_by` are parser combinators from the "
+"`combine` library. `tool` and `tools` are parsers produced from those "
+"combinators. The latter is also the final parser."
+msgstr ""
+"`take_while1`、`range`、`sep_by`は`combine`ライブラリのパーサーコンビネータで"
+"す。`tool`と`tools` はそれらのコンビネータから生成されたパーサーです。tools "
+"は作られた最終的なパーサーでもあります。"
+
+#. type: Title ##
+#: original/Home.md:30
+#, no-wrap
+msgid "Tutorial"
+msgstr "チュートリアル"
+
+#. type: Plain text
+#: original/Home.md:33
+msgid "Learn `combine` with the not so quick [Quickstart Tutorial](Tutorial)."
+msgstr "それほど手軽にはいきませんが[クイックスタートチュートリアル](Tutorial)で`combine`を学べます。"
+
+#. type: Title ##
+#: original/Home.md:34
+#, no-wrap
+msgid "Inner machinery"
+msgstr "内部の仕組み"
+
+#. type: Plain text
+#: original/Home.md:41
+#, no-wrap
+msgid ""
+"Every parser in every language needs roughly these four things to work:\n"
+" - [The data to parse or a way to obtain that data](Input-Machinery)\n"
+" - [A definition of the format to parse](Parser-Trait)\n"
+" - A way of gathering and returning the information it has found\n"
+" - [A way to notify about Errors during parsing](Error-Handling)\n"
+msgstr ""
+"あらゆる言語のあらゆるパーサーには大まかに言ってこれら4つが動作することが必要です。\n"
+"\n"
+"- [パースするデータまたはそのデータの取得方法](Input-Machinery)\n"
+"- [パースする形式の定義](Parser-Trait)\n"
+"- 見つけた情報を集めて返す方法\n"
+"- [パース中のエラーを通知する方法](Error-Handling)\n"
+
+#. type: Plain text
+#: original/Home.md:45
+#, no-wrap
+msgid ""
+"It may also support one or more of these extra functionalities\n"
+" - Resume parsing / streaming of input data\n"
+" - Giving location information of input data tokens (e.g. line, column for text input)\n"
+msgstr ""
+"1つ以上の追加の機能に対応することもあります。\n"
+"\n"
+"- 入力データのパース／ストリーミングの再開\n"
+"- 入力データトークンの位置情報の付与（テキスト入力の場合は行や列など）\n"
+
+#. type: Plain text
+#: original/Home.md:47
+msgid ""
+"As `combine` attempts to be as flexible as possible in what can be used as "
+"input there can be quite a few traits to implement but most of the high-"
+"level use should only need to concern itself with a few of them (namely "
+"`Stream`, `RangeStream` and `FullRangeStream`, the latter two only for zero-"
+"copy parsing)."
+msgstr "`compine` は入力として使用できるものに対して可能な限り柔軟であろうとするので、実装すべきトレイトは非常に多くなりますが、アプリケーションレベル (high-level) で使用する場合は、それらのうちのいくつか (`Stream`、`RangeStream`および`FullRangeStream`, 後者2つは zero-copy のパースをする場合のみ) を気にすればよいです。"
+
+#. type: Plain text
+#: original/Home.md:49
+msgid ""
+"The linked chapters describe the `combine` way of these things and why they "
+"are the way they are. This helps a lot understanding error messages and "
+"dealing with sticks and stones."
+msgstr "リンク先の章ではこれらのことに対する `combine`の流儀を説明し、なぜそのようになっているのかを説明します。これは、エラーメッセージの理解に大いに役立ち、出会ってもひるまなくなるでしょう。"
+
+#. type: Title ##
+#: original/Home.md:50
+#, no-wrap
+msgid "Alternatives"
+msgstr "代替になるライブラリ"
+
+#. type: Plain text
+#: original/Home.md:53
+msgid "For reference, here are some alternatives in the rust ecosystem:"
+msgstr "参考のために、Rust エコシステムには他の選択肢があります。"
+
+#. type: Bullet: ' - '
+#: original/Home.md:57
+msgid "[nom](https://crates.io/crates/nom)"
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Home.md:57
+msgid "[pest](https://crates.io/crates/pest)"
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Home.md:57
+msgid "[lalrpop](https://crates.io/crates/lalrpop)"
+msgstr ""
+
+#. type: Plain text
+#: original/Home.md:58
+msgid ""
+"All parser libraries come with their own trade offs, so choose wisely :"
+"smile: ."
+msgstr "全てのパーサライブラリにはそれぞれトレードオフがあります。賢く選定しましょう :smile:"
+
+#. type: Plain text
+#: original/Input-Machinery.md:2
+msgid "This is all about the data to parse and how to feed it into the parser."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:4
+msgid ""
+"For many use cases the full input data is available as `&str` or `&[u8]`. "
+"This is like the best food for any parser implementation because the parser "
+"can happily jump back to previous positions in the input data and can "
+"efficiently match constant subslices with `memcmp` because the input data is "
+"laid out in contiguous memory."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:6
+msgid ""
+"In addition to parsing slices `combine` also wants to support more "
+"constrained environments:"
+msgstr ""
+
+#. type: Bullet: '* '
+#: original/Input-Machinery.md:10
+msgid ""
+"The input could be stored in a fixed size ring buffer. Then the parser "
+"cannot use `memcmp` anymore because a ring buffers memory is not contiguous."
+msgstr ""
+
+#. type: Bullet: '* '
+#: original/Input-Machinery.md:10
+msgid ""
+"The input could come from a `Read` instance which only delivers its input "
+"byte by byte without any type of buffering (say a serial peripheral in a "
+"microcontroller)."
+msgstr ""
+
+#. type: Bullet: '* '
+#: original/Input-Machinery.md:10
+msgid ""
+"The input could be in the form of an `Iterator` of tokens from an earlier "
+"lexical pass."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:12
+msgid ""
+"`combine` is also liberal in the type of the input data. It does not have to "
+"be a `char` or `u8`. Any type is allowed, as long as it is `Clone` and "
+"`PartialEq`."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:14
+msgid ""
+"To classify the abilities of the data source and to allow for more efficient "
+"parsing when the data source supports it, `combine` uses a trait hierarchy. "
+"You find all these traits under `combine::stream`."
+msgstr ""
+
+#. type: Fenced code block
+#: original/Input-Machinery.md:15
+#, no-wrap
+msgid ""
+"   ----------------------------- more capable ------------>\n"
+"\n"
+"   StreamOnce    Positioned    ResetStream    RangeStreamOnce\n"
+"         ^          |              ^             |  |         \n"
+"         |----------┘              └-------------┘  |         \n"
+"         └------------------------------------------┘            <--- these arrows mean \"requires\"\n"
+"                                                           \n"
+"   \\___________________________________/                   \n"
+"                   Stream                                  \n"
+"   \\_________________________________________________________/\n"
+"                        RangeStream\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:30
+msgid ""
+"Every data source need to implement the base trait `StreamOnce`. Depending "
+"on the capabilities of the data source, it may also implement the traits "
+"listed right of `StreamOnce`. The traits are ordered; traits to the right "
+"require more and more. `Stream` and `RangeStream` are abbreviations and are "
+"automatically implemented for data sources that implement all the traits "
+"enclosed by the braces `\\__/`."
+msgstr ""
+
+#. type: Title ##
+#: original/Input-Machinery.md:31
+#, no-wrap
+msgid "The basic stream"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:34
+msgid ""
+"`StreamOnce` provides a method to gather one input element at a time. An "
+"input element is `char`, `u8` or any self defined type that implements "
+"`Clone` and `PartialEq` as is defined by the `Token` associated type. The "
+"data source does not need to provide slices of multiple elements, nor "
+"jumping back to previous positions in the stream. `StreamOnce` is also the "
+"trait that contains the most important associated types for a data source. "
+"(The `Range` and `Position` associated types are only meaningful if the data "
+"source implements `Positioned` / `RangeStreamOnce`. But because these types "
+"depend on the input `Token` type, they are all defined together. If a data "
+"source does not implement `RangeStreamOnce`, it simply sets it's `Range` "
+"type to `&'static [Self::Token]` or `Token` type.)"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:36
+msgid "For reference, here is the `StreamOnce` definition:"
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Input-Machinery.md:37
+#, no-wrap
+msgid ""
+"pub trait StreamOnce {\n"
+"    type Token: Clone + PartialEq;\n"
+"    type Range: Clone + PartialEq;\n"
+"    type Position: Clone + Ord;\n"
+"    type Error: ParseError<Self::Token, Self::Range, Self::Position>;\n"
+"    fn uncons(&mut self) -> Result<Self::Token, StreamErrorFor<Self>>;\n"
+"    fn is_partial(&self) -> bool { ... }\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:49
+msgid ""
+"Next up the hierarchy is `Positioned`. The stream position is mostly opaque "
+"to the parser. It is not used to return to some previous position in the "
+"input data or to calculate lengths/distances. The parser only ever uses it "
+"check which of two positions is further ahead in a stream (`StreamOnce::"
+"Position : Ord`). Because `Position` has so few constraints, `combine` uses "
+"it to track line and column numbers for `&str` input on the fly. Of course "
+"this extra work is Opt-In."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Input-Machinery.md:50
+#, no-wrap
+msgid ""
+"pub trait Positioned: StreamOnce {\n"
+"    fn position(&self) -> Self::Position;\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:57
+msgid ""
+"Next up is `Resetable`. With a `Resetable` data source, the parser can "
+"return to a previously seen position within the stream / look into the "
+"future. In context of `Resetable` such a position is called a checkpoint. "
+"This is used for combinators like `attempt()` or `choice()`."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:59
+msgid ""
+"Note that the parser doesn't clone the stream, it can only reset the stream "
+"to some position it has previously seen. This trait requires that the data "
+"source does some kind of buffering but does not require the data source to "
+"use contiguous memory."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:61
+msgid ""
+"(`Resetable` may change in the next version of combine to handle errors if "
+"the past is already deleted: https://github.com/Marwes/combine/issues/231)."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Input-Machinery.md:62
+#, no-wrap
+msgid ""
+"pub trait Resetable {\n"
+"    type Checkpoint: Clone;\n"
+"    fn checkpoint(&self) -> Self::Checkpoint;\n"
+"    fn reset(&mut self, checkpoint: Self::Checkpoint);\n"
+"}\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:71
+msgid ""
+"These first three trait combined becomes a `Stream` which is the constraint "
+"that most of `combine`'s parsers need. Often though we want to use zero-copy "
+"parsing which is where the remaining traits come in."
+msgstr ""
+
+#. type: Title ##
+#: original/Input-Machinery.md:72
+#, no-wrap
+msgid "Zero-copy streams"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:75
+msgid ""
+"With a `RangeStreamOnce` data source, the parser becomes able to do zero "
+"copy parsing. The `StreamOnce::Range` type typically is a reference type as "
+"well as `Clone + PartialEq` and therefore allows for zero copy comparisions. "
+"It is possible to implement a `Range` type for non contiguous memory, but "
+"typically this type takes advantage of the continuity of the underlying "
+"memory."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:77
+msgid ""
+"`RangeStreamOnce` extends the `Resetable` mechanism by allowing to calculate "
+"a distance between checkpoints. The two `usize`s below refer to number of "
+"elements. In the case of `&str`, this refers to the number of bytes, not the "
+"number of unicode codepoints."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Input-Machinery.md:78
+#, no-wrap
+msgid ""
+"pub trait RangeStreamOnce: StreamOnce + Resetable {\n"
+"    fn uncons_range(&mut self, size: usize) -> Result<Self::Range, StreamErrorFor<Self>>;\n"
+"    fn uncons_while<F>(&mut self, f: F) -> Result<Self::Range, StreamErrorFor<Self>>\n"
+"        where F: FnMut(Self::Token) -> bool;\n"
+"    fn distance(&self, end: &Self::Checkpoint) -> usize;\n"
+"}\n"
+msgstr ""
+
+#. type: Title ###
+#: original/Input-Machinery.md:87
+#, no-wrap
+msgid "Provided implementations"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:90
+msgid ""
+"`combine` supports `&str`, `&[T]`, `Iterator` and `Read` as data source out "
+"of the box."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:95
+msgid "`&str` and `&[T]` (if T:Clone) can just be used as input for parsing."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:95
+msgid ""
+"If `T` in `&[T]` is not `Clone` or if cloning is expensive, the "
+"`SliceStream` wrapper comes to the rescue. Wrapping the input slice in this "
+"type makes the `Token` a `&T`."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:95
+msgid ""
+"Any `Iterator` can be turned into a data source by wrapping it in "
+"`IteratorStream` with `IteratorStream::new(intoiter)`."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:95
+msgid ""
+"Any `std::io::Read` byte source can be turned into a data source by wrapping "
+"it in `ReadStream` with `ReadStream::new(read)`."
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:97
+msgid ""
+"The following table lists the implemented traits and the resulting types for "
+"each of the mentioned data sources."
+msgstr ""
+
+#. type: Fenced code block
+#: original/Input-Machinery.md:98
+#, no-wrap
+msgid ""
+"pub struct SliceStream<'a, T: 'a>(pub &'a [T]);\n"
+"pub struct IteratorStream<I>( ... ); // I : Iterator\n"
+"pub struct ReadStream<R> { ... } // R : Read\n"
+"\n"
+"|                         | &str               | &[T], T : Clone  | SliceStream<T>    | IteratorStream<I>  | ReadStream<R : Read>   |\n"
+"|-------------------------|--------------------|------------------|-------------------|--------------------|------------------------|\n"
+"| trait StreamOnce        | x                  | x                | x                 | x                  | x                      |\n"
+"|   ↳ type Token          |  char              |  T               |  &T               |   I::Token         |  u8                    |\n"
+"|   ↳ type Range          |  &str              |  &[T]            |  &[T]             |   I::Token         |  u8                    |\n"
+"|   ↳ type Position       |  PointerOffset     |  PointerOffset   |  PointerOffset    |   ()               |  usize                 |\n"
+"|   ↳ type Error          |  StringStreamError |  UnexpectedParse |  UnexpectedParse  |   UnexpectedParse  |  Errors<u8, u8, usize> |\n"
+"|   ↳ fn is_partial       |  return false      |  return false    |  return false     |   return false     |  return false          |\n"
+"| trait Positioned        | x                  | x                | x                 |                    |                        |\n"
+"| trait Resetable         | x                  | x                | x                 | x if I : Clone     |                        |\n"
+"|   ↳ type Checkpoint     |  &str              |  &[T]            |  &[T]             |                    |                        |\n"
+"| trait RangeStreamOnce   | x                  | x                | x                 |                    |                        |\n"
+"| trait DefaultPositioned | x                  | x                | x                 | x                  | x                      |\n"
+"|   ↳ type Positioner     |  SourcePosition    |  IndexPositioner |  IndexPositioner  |  IndexPositioner   |  IndexPositioner       |\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:119
+msgid ""
+"`combine` also provides some wrappers which add functionality to less "
+"capable stream types or alter their behaviour."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`PartialStream`: Wrapping the data source in this type changes the parser "
+"behaviour: If the parser hits the end of the input stream and has not found "
+"any error yet, it will gracefully ask for more data instead of erroring."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`State`: Wrapping in `State` changes the `Position` type. You can either "
+"choose your own `Positioner` by wrapping with `State::with_positioner(s, x)` "
+"or using the default positioner by wrapping with `State::new(s)`. You find "
+"the used default positioner in the last row in the two tables above and "
+"below."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"Because position tracking is stateful, the corresponding state (the struct "
+"that implements `Positioner`) must be included when creating checkpoints. "
+"The `State` wrapper is reused as `Checkpoint` type, but that is only an "
+"implementation detail."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"Note that there are two kinds of default positioners at play here. First, "
+"the default positioner of a plain `&str`, ... which is `PointerOffset` (or "
+"`usize` for `ReadStream` or `()` for `IteratorStream`). Second the "
+"positioner that is applied when using `State::new(s)` which is "
+"`SourcePosition` or `IndexPositioner`."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`PointerOffset` is most simple but absolutely performant. It does not count "
+"anything but is just a raw memory address. If an error type contains "
+"position information in `PointerOffet` format, you need to call "
+"`translate_position()` on the `PointerOffset`, so that you can make sense of "
+"the information."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`IndexPositioner` will actively count the number of items from the start of "
+"the stream."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`SourcePosition` will track the line and column number on the fly by looking "
+"out for `\\n`. This adds some additional work, but it obviates going through "
+"the whole input data again just for making a index based error message / "
+"position data human friendly."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`BufferedStream`: As you can see in the table above, `IteratorStream` and "
+"`ReadStream` don't implement `Positioned` and `Resetable` and therefore not "
+"`Stream`. But most of the parser combinators require the input type to be at "
+"least a `Stream`. `BufferedStream` helps with that. `BufferedStream` uses a "
+"fixed size `VecDeque` to add `Resetable` and `Positioned` to a `StreamOnce` "
+"data source."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"What happens if the parser wants to reset to a checkpoint that has already "
+"been removed from the ring buffer? `BufferedStream` allows to `reset()` to "
+"any previous checkpoint, even when it points to deleted data. When the "
+"parser calls `uncons()` after it has been reset to a deleted data, "
+"`uncons()` returns `Err()` with the static string error message: "
+"\"Backtracked to far\"."
+msgstr ""
+
+#. type: Bullet: '   - '
+#: original/Input-Machinery.md:131
+msgid ""
+"When creating the wrapper, you must define the size of the ring buffer / the "
+"look ahead ability. The buffer size must fit your parsing problem. Note that "
+"`BufferedStream` does not read items from the underlying stream in advance, "
+"but only when needed, so the whole buffer size is available for backtracking."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:131
+msgid ""
+"`easy::Stream` (Don't confuse that with the trait `Stream`): This Wrapper "
+"changes the `Error` type to `easy::ParserError`. The default error type "
+"(except for `ReadStream`) is `StringStreamError` or `UnexpectedParse`. These "
+"error types are simple enums without any associated data. Therefore these "
+"errors types do not track the kind of error or the position of the error in "
+"the input data. This is good for no_std environments where allocating is "
+"difficult. But when you are interested in more exact details about the "
+"parser error and you are fine with allocating all error messages into a "
+"`Vec<>`, then just wrap a data source in an `easy::Stream`. See the chapter "
+"about the error machinery for more details."
+msgstr ""
+
+#. type: Fenced code block
+#: original/Input-Machinery.md:133
+#, no-wrap
+msgid ""
+"pub struct PartialStream<S>(pub S);\n"
+"pub struct State<I, X> {\n"
+"    pub input: I,\n"
+"    pub positioner: X,\n"
+"}\n"
+"pub struct BufferedStream<I> where I: StreamOnce + Positioned,  { /* fields omitted */ }\n"
+"pub struct easy::Stream<S>(pub S);\n"
+"\n"
+"|                         | PartialStream<S>         | State<S, X : Positioner>         | BufferedStream<S>        | easy::Stream<S>          |\n"
+"|-------------------------|--------------------------|----------------------------------|--------------------------|--------------------------|\n"
+"| trait StreamOnce        | x if S : StreamOnce      | x                                | x                        | x if S : StreamOnce      |\n"
+"|   ↳ type Token          |  S::Token                |  S::Token                        |  S::Token                |  S::Token                |\n"
+"|   ↳ type Range          |  S::Range                |  S::Range                        |  S::Range                |  S::Range                |\n"
+"|   ↳ type Position       |  S::Position             |  X::Positon                      |  S::Position             |  S::Position             |\n"
+"|   ↳ type Error          |  S::Error                |  S::Error                        |  S::Error                |  easy::ParseError<S>     |\n"
+"|   ↳ fn is_partial       |  return *true*           |  return S::is_partial            |  return S::is_partial    |  return S::is_partial    |\n"
+"| trait Positioned        | x if S : Positioned      | x if S : Positioned              | x                        | x if S : Positioned      |\n"
+"| trait Resetable         | x if S : Resetable       | x if S : Resetable               | x even if S : !Resetable | x if S : Resetable       |\n"
+"|   ↳ type Checkpoint     |  S::Checkpoint           |  State<I::Checkp.., X::Checkp..> |  usize                   |  S::Checkpoint           |\n"
+"| trait RangeStreamOnce   | x if S : RangeStreamOnce | x if S : RangeStreamOnce         |                          | x if S : RangeStreamOnce |\n"
+"| trait DefaultPositioned |                          | x                                |                          |                          |\n"
+"|   ↳ type Positioner     |                          |  IndexPositioner                 |                          |                          |\n"
+msgstr ""
+
+#. type: Title ###
+#: original/Input-Machinery.md:157
+#, no-wrap
+msgid "Best practices"
+msgstr ""
+
+#. type: Plain text
+#: original/Input-Machinery.md:160
+msgid "First you need to answer a few questions about your data source `s`."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:166
+msgid "Is your data source neither a slice nor an `Iterator` nor a `Read`?"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:166
+msgid ""
+"You could implement `StreamOnce` and siblings, but I recommend implementing "
+"`Iterator` or `Read` instead and use the wrappers:"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:166
+msgid ""
+"`let s = IteratorStream::new(i);` if your source `i` is an `Iterator + "
+"Clone`."
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:166
+msgid ""
+"`let s = BufferedStream::new(IteratorStream::new(i), 100);` if your source "
+"`i` is an `Iterator`."
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:166
+msgid ""
+"`let s = BufferedStream::new(State::new(ReadStream::new(r)), 100);` if your "
+"source `r` is an `io::Read`."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:173
+msgid "Do you want nice human readable errors? (and you have `std` available)"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:173
+msgid "`let s = easy::Stream(s);` if ` s : &str` or `s : &[T]`."
+msgstr ""
+
+#. type: Bullet: '      - '
+#: original/Input-Machinery.md:173
+msgid "Also use `map_err(|e| e.translate_position(s))` on all parser errors"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:173
+msgid ""
+"`let s = easy::Stream(State::new(s));` if `s : &str` and if you are "
+"interested in line/column information."
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:173
+msgid ""
+"`let s = BufferedStream::new(easy::Stream(State::new(IteratorStream::"
+"new(i))), 100);` if `i : Iterator`"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:173
+msgid ""
+"`let s = BufferedStream::new(easy::Stream(State::new(ReadStream::new(r))), "
+"100);` if `r : Read`"
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:176
+msgid ""
+"Is your data source `s : &[T]` a slice but cloning `T` is too much overhead?"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:176
+msgid ""
+"Use `SliceStream(s)` instead of `s` (and combine like `easy::"
+"Stream(SliceStream(s))`)"
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Input-Machinery.md:180
+msgid "Is your data arriving in parts?"
+msgstr ""
+
+#. type: Bullet: '    - '
+#: original/Input-Machinery.md:180
+msgid ""
+"Does waiting for more data and retrying the parsing from the beginning is "
+"too much overhead? (> 1kb object size, more than 100 objects per second)"
+msgstr ""
+
+#. type: Bullet: '       - '
+#: original/Input-Machinery.md:180
+msgid ""
+"Use `PartialStream(s)`. The tradeoff is that the parser output can't borrow "
+"from the input as we generally must assume the input to be shortlived."
+msgstr ""
+
+#. type: Plain text
+#: original/Parser-Trait.md:3
+msgid ""
+"From the rust code viewpoint, a parser is a type that implements the "
+"`Parser` trait."
+msgstr ""
+
+#. type: Fenced code block (rust)
+#: original/Parser-Trait.md:5
+#, no-wrap
+msgid ""
+"// ommitted/shortened some trait bounds\n"
+"// P2 is always another Parser<Input = I> with the same input\n"
+"// ERR is <I as StreamOnce>::Error\n"
+"\n"
+"pub trait Parser {\n"
+"    type Input: Stream;         // abbreviated as I\n"
+"    type Output;                // abbreviated as O\n"
+"    type PartialState: Default; // abbreviated as PS\n"
+"\n"
+"    // ENTRY POINTS\n"
+"\n"
+"    fn easy_parse<I>(&mut self, input: I2 ) -> Result<(O, I2), ParseError<I>> { ... }\n"
+"    fn parse(&mut self, input: I ) -> Result<(O, I), <I as StreamOnce>::Error> { ... }\n"
+"    fn parse_with_state(&mut self, input: &mut I, state: &mut PS ) -> Result<O, <I as StreamOnce>::Error> { ... }\n"
+"\n"
+"    // COMBINING WITH OTHER PARSERS (or with itself)\n"
+"\n"
+"    fn with<P2>(self, p: P2) -> With<Self, P2>  { ... }\n"
+"    fn skip<P2>(self, p: P2) -> Skip<Self, P2> { ... }\n"
+"    fn and<P2>(self, p: P2) -> (Self, P2) { ... }\n"
+"    fn or<P2>(self, p: P2) -> Or<Self, P2> where P2 and P1 have the same Output { ... }\n"
+"    fn left<R>(self) -> Either<Self, R> where R: Parser<Input = I, Output = O> { ... }\n"
+"    fn right<L>(self) -> Either<L, Self> where L: Parser<Input = I, Output = O> { ... }\n"
+"\n"
+"    // MAPPING THE OUTPUT\n"
+"\n"
+"    fn then<N, F>(self, f: impl FnMut(O) -> impl Parser) -> Then<Self, F> { ... }\n"
+"    fn then_partial<N, F>(self, f: FnMut(&mut O) -> impl Parser) -> ThenPartial<Self, F> { ... }\n"
+"    fn map<F, B>(self, f: impl FnMut(O) -> B) -> Map<Self, F> { ... }\n"
+"    fn flat_map<F, B>(self, f: impl FnMut(O) -> Result<B, ERR>) -> FlatMap<Self, F> { ... }\n"
+"    fn and_then<F, O, E, I>(self, f: impl FnMut(O) -> Result<O, ERR>) -> AndThen<Self, F>  { ... }\n"
+"\n"
+"    // MANIPULATING ERROR MESSAGES    \n"
+"\n"
+"    fn message<S>(self, msg: impl Into<Info<>>) -> Message<Self> { ... }\n"
+"    fn expected<S>(self, msg: impl Into<Info<>>) -> Expected<Self> { ... }\n"
+"    fn silent(self) -> Silent<Self> { ... }\n"
+"\n"
+"    // MISCELLANEOUS\n"
+"\n"
+"    fn by_ref(&mut self) -> &mut Self { ... }\n"
+"    fn boxed<'a>(self) -> Box<dyn Parser<> + 'a> { ... }\n"
+"\n"
+"    // INTERNAL API STUFF / IMPLEMENTING PARSERS YOURSELF\n"
+"\n"
+"    fn iter(self, input: &mut I ) -> Iter<Self, PS, FirstMode> { ... }\n"
+"    fn partial_iter<'a, 's, M>(self, mode: M, input: &'a mut I, partial_state: &'s mut PS ) -> Iter<'a, Self, &'s mut PS, M> where M: ParseMode  { ... }\n"
+"    fn parse_stream(&mut self, input: &mut I ) -> ParseResult<O, I> { ... }\n"
+"    fn parse_stream_consumed(&mut self, input: &mut I ) -> ConsumedResult<O, I> { ... }\n"
+"    fn parse_stream_consumed_partial(&mut self, input: &mut I, state: &mut PS ) -> ConsumedResult<O, I> { ... }\n"
+"    fn parse_lazy(&mut self, input: &mut I ) -> ConsumedResult<O, I> { ... }\n"
+"    fn parse_first(&mut self, input: &mut I, state: &mut PS ) -> ConsumedResult<O, I> { ... }\n"
+"    fn parse_partial(&mut self, input: &mut I, state: &mut PS ) -> ConsumedResult<O, I> { ... }\n"
+"    fn add_error(&mut self, _error: &mut Tracked<<I as StreamOnce>::Error> ) { ... }\n"
+"\n"
+"}\n"
+"\n"
+msgstr ""
+
+#. type: Title ##
+#: original/Tutorial.md:2
+#, no-wrap
+msgid "Code Structure"
+msgstr "コードの構成"
+
+#. type: Plain text
+#: original/Tutorial.md:5
+msgid ""
+"`combine` is very flexible in regards to its data source and error handling "
+"but for the sake of keeping this tutorial simple I will assume that your "
+"input is `&str` and that you want extended error information. If you need "
+"another input source or want to customize the errors used, see the chapter "
+"\"Inner Machinery\" for all the options."
+msgstr "`combine` はデータソースとエラーハンドリングの観点でとても柔軟なライブラリですが、このチュートリアルをシンプルなものにするためにインプットを `&str` とし、拡張されたエラーを使うものと仮定します。もし他の入力ソースが必要な場合や、使用するエラーをカスタマイズしたい場合は、すべてのオプションについて \"Inner Machinery\" の章を参照してください。"
+
+#. type: Plain text
+#: original/Tutorial.md:8
+msgid ""
+"Let's start by structuring your parsing code correctly from the beginning.  "
+"The 'Hello combine' example works, but only because it only uses the each "
+"parser once. To make it re-usable and testable we package it into a "
+"function. We also add the `decode()` function to make handle some "
+"organizational stuff like transforming the error type."
+msgstr ""
+"まずは、パースするコードを最初から正しく構成することを始めましょう。'Hello "
+"combine'の例はうまくいきますが、それは各パーサーを一度しか使っていないからで"
+"す。それを再利用やテストができるように関数としてまとめます。また、`decode()` "
+"関数を追加してエラータイプの変換などの処理を行うようにします。"
+
+#. type: Plain text
+#: original/Tutorial.md:10
+msgid ""
+"The code otherwise does the same parsing as 'Hello combine' example in "
+"listing A-1 from the first chapter. Errors are returned as String here, in "
+"your own code you would likely have your own error type instead. The only "
+"real difference is, that I wrapped the input with a [`State`](https://docs."
+"rs/combine/*/combine/stream/state/struct.State.html) which adds line and "
+"column information to the parser errors."
+msgstr "それ以外のコードは、第1章のリストA-1にある 'Hello combine' の例と同じパース処理を行います。 ここではエラーを String で返しますが、あなたのコードでは独自のエラータイプを使っているかもしれません。 唯一の違いは入力を [`State`](https://docs.rs/combine/*/combine/stream/state/struct.State.html) でラップして、パーサーエラーに行と列の情報を追加していることです。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:11
+#, no-wrap
+msgid ""
+"# use combine::parser::range::{range, take_while1};\n"
+"# use combine::parser::repeat::{sep_by};\n"
+"# use combine::parser::Parser;\n"
+"# use combine::stream::{RangeStream, state::State};\n"
+"# use combine::error::ParseError;\n"
+"# \n"
+"// Copy the fn header as is, only change ------------╮\n"
+"//                                                   v\n"
+"fn tools<'a, I>() -> impl Parser<I, Output = Vec<&'a str>>\n"
+"    where I: RangeStream<Token = char, Range=&'a str>,\n"
+"          I::Error: ParseError<I::Token, I::Range, I::Position>,\n"
+"{\n"
+"    let tool = take_while1(|c : char| c.is_alphabetic());\n"
+"    sep_by(tool, range(\", \"))\n"
+"}\n"
+"\n"
+"fn decode(input : &str) -> Result<Vec<&str>, String> {\n"
+"    match tools().easy_parse(State::new(input)) {\n"
+"        Ok((output, _remaining_input)) => Ok(output),\n"
+"        Err(err) => Err(format!(\"{} in `{}`\", err, input)),\n"
+"    }\n"
+"}\n"
+"\n"
+"let input = \"Hammer, Saw, Drill\";\n"
+"let output = decode(input).unwrap();\n"
+msgstr ""
+"# use combine::parser::range::{range, take_while1};\n"
+"# use combine::parser::repeat::{sep_by};\n"
+"# use combine::parser::Parser;\n"
+"# use combine::stream::{RangeStream, state::State};\n"
+"# use combine::error::ParseError;\n"
+"# \n"
+"// Copy the fn header as is, only change ------------╮\n"
+"//                                                   v\n"
+"fn tools<'a, I>() -> impl Parser<I, Output = Vec<&'a str>>\n"
+"    where I: RangeStream<Token = char, Range=&'a str>,\n"
+"          I::Error: ParseError<I::Token, I::Range, I::Position>,\n"
+"{\n"
+"    let tool = take_while1(|c : char| c.is_alphabetic());\n"
+"    sep_by(tool, range(\", \"))\n"
+"}\n"
+"\n"
+"fn decode(input : &str) -> Result<Vec<&str>, String> {\n"
+"    match tools().easy_parse(State::new(input)) {\n"
+"        Ok((output, _remaining_input)) => Ok(output),\n"
+"        Err(err) => Err(format!(\"{} in `{}`\", err, input)),\n"
+"    }\n"
+"}\n"
+"\n"
+"let input = \"Hammer, Saw, Drill\";\n"
+"let output = decode(input).unwrap();\n"
+
+#. type: Plain text
+#: original/Tutorial.md:39
+#, no-wrap
+msgid "*Listing T-1 - 'Hello combine' example, extended*\n"
+msgstr "*Listing T-1 - 'Hello combine' example, extended*\n"
+
+#. type: Plain text
+#: original/Tutorial.md:41
+#, no-wrap
+msgid "Any parser that we want to use more than once must be defined in the form `fn xyz() -> impl Parser`, like `tools` in the above example. To use such a parser, you must call the function instead of using it like a variable: `tools()` in listing T-1 vs `tools` in listing A-1.\n"
+msgstr "複数回使用したいパーサーは、上の例の `tools` のように `fn xyz() -> impl Parser` という形で定義する必要があります。このようなパーサーを使用するには、変数のように使用するのではなく、関数を呼び出す必要があります。リスト T-1 の `tools()` とリスト A-1 の `tools` を比較してみてください。\n"
+
+#. type: Plain text
+#: original/Tutorial.md:43
+msgid ""
+"Whenever you create new `fn` parsers, just copy the whole `fn` header from "
+"this example, including the `where` clause. Change the function name and "
+"adapt the `Output` type. The `I::Error` line is noisy, but unfortunately "
+"necessary due to [rust-lang/rust#24159][]. If that is too noisy for you, see "
+"chapter TODO."
+msgstr ""
+"新しい `fn` パーサーを作成するときは、この例から `where` 節を含む `fn` ヘッ"
+"ダーを丸ごとコピーすればよいです。関数名を変更し、 `Output` 型も合わせます。"
+"`I::Error` の行はごちゃごちゃしていますが残念ながら [rust-lang/rust#24159][] "
+"のために必要です。もしこれがうるさいようであれば TODO の章を参照してくださ"
+"い。"
+
+#. type: Plain text
+#: original/Tutorial.md:45
+msgid "[rust-lang/rust#24159]:https://github.com/rust-lang/rust/issues/24159"
+msgstr "[rust-lang/rust#24159]:https://github.com/rust-lang/rust/issues/24159"
+
+#. type: Title ##
+#: original/Tutorial.md:46
+#, no-wrap
+msgid "Parsing"
+msgstr "パース"
+
+#. type: Plain text
+#: original/Tutorial.md:49
+msgid ""
+"Parsing starts at the beginning of the input. The parser then goes forward "
+"character by character, deciding what to do next on every step. It can go "
+"back a few steps and try something else if it hit a dead end in its logic. "
+"It can decide its decoding path on data it has seen previously."
+msgstr ""
+"パースは入力の先頭から始まります。そして、パーサーは一文字ずつ進めていき、そ"
+"の都度次に何をすべきかを決定していきます。パース中に行き詰まりると、数ステッ"
+"プ戻って別のパースを試みることもできます。また以前に読み取ったデータに基づい"
+"て、パースする経路も決められます。"
+
+#. type: Plain text
+#: original/Tutorial.md:51
+msgid ""
+"Each parser returns some output value which is assembled from the processed "
+"characters and/or the output of nested parsers. A parser can alternatively "
+"return an error condition if the input did not match its expectations."
+msgstr "各パーサーは、処理が済んだ文字を集めてできた出力の値かネストされたパーサーからの出力、またはそれら両方を返します。パーサーは予想した値と入力が一致しない場合、代わりにエラー条件を返せます。"
+
+#. type: Plain text
+#: original/Tutorial.md:53
+msgid ""
+"For all primitive parsers like `digit()` applies: If a parser read and "
+"processed some bytes from the input stream, the bytes are consumed and "
+"subsequent parsers start where the previous one finished (however there are "
+"some special combinators which break this rule)."
+msgstr "`digit()`のようなすべてのプリミティブなパーサーに当てはまる話ですが、もしパーサーが入力ストリームからいくつかのバイト列を読み取り処理した場合、そのバイト列は消費され後続のパーサーは前のパーサーが終了したところから始まります（ただし、このルールを破る特別なコンビネータもいくつかあります）。"
+
+#. type: Title ##
+#: original/Tutorial.md:54
+#, no-wrap
+msgid "Understanding the Output type"
+msgstr "出力の型を理解する"
+
+#. type: Plain text
+#: original/Tutorial.md:57
+msgid ""
+"To write parsers effectively, you must understand what happens with the "
+"output values."
+msgstr ""
+"パーサーを効率的に書くためには、値の出力が何かを理解しなければいけません。"
+
+#. type: Plain text
+#: original/Tutorial.md:59
+msgid ""
+"At the end, there is only a single output type/value. This type/value must "
+"contain all the information you want to extract."
+msgstr "結論としては、1つの出力の型/値だけが存在しており、この型/値には抽出したい情報がすべて含まれていなければいけません。"
+
+#. type: Plain text
+#: original/Tutorial.md:61
+msgid ""
+"During the parsing process, new outputs arise, some outputs are `map()`ped "
+"to different types, some are merged and some are dropped. Fortunately, there "
+"is an expressive toolset to manage this."
+msgstr "パースの過程では、新しい出力が発生し、ある出力は別の型に`map()`され、ある出力はマージされ、ある出力は削除されます。幸いなことにこれを扱うための表現力豊かなツールセットが存在します。"
+
+#. type: Plain text
+#: original/Tutorial.md:63
+msgid ""
+"Let's first look at a parser that has no nested parsers: `parser::char::"
+"digit`. This parser has the output type `char` and consumes one character of "
+"the input stream. The output value will be the consumed character. It errors "
+"if the consumed character is no digit (0-9)."
+msgstr "まずネストがないパーサーとして `parser::char::digit` を見てみましょう。このパーサーは出力型に `char` を持ち、入力ストリームから1文字消費します。出力値は、消費された文字になります。消費された文字が数字 (0-9) でない場合は、エラーになります。"
+
+#. type: Plain text
+#: original/Tutorial.md:65
+msgid ""
+"The most basic combination of parsers is sequencing and the simplest way "
+"this can be done by putting them in a tuples. The output of that tuple "
+"parser is also a tuple."
+msgstr ""
+"パーサーの最も基本的な組み合わせ方法は連続であり、これを最も単純に行う方法は"
+"タプルに入れることです。タプルパーサーの出力はタプルです。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:66
+#, no-wrap
+msgid "let two_digits = (digit(), digit()); // Output = (char, char)\n"
+msgstr "let two_digits = (digit(), digit()); // Output = (char, char)\n"
+
+#. type: Plain text
+#: original/Tutorial.md:78
+#, no-wrap
+msgid ""
+"Only chaining parsers using tuples would make the output type very complicated very soon as the output would be an equally large tuple. Fortunately, we have several options to remedy this:\n"
+" - Drop (unneeded) parts of the output type by mapping or processing it:\n"
+"    `let first_digit = (digit(), digit()).map(|(digit1, _digit2)| digit1);`\n"
+"    Note: There are often more expressive helpers like [`skip`][] or [`with`][]:\n"
+"    `let first_digit = digit().skip(digit());`\n"
+" - Collect repeating elements into a `Vec` or similar.\n"
+" - Ignoring a complicated output type and instead taking a `&str` slice of what has been consumed: `let two_digits_str = recognize( (digit(), digit()) );`\n"
+" - Assemble your (complex/recursive) output type, for example `json::Value`.\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Tutorial.md:80
+msgid ""
+"But there is no fits-all strategy, it all depends on your parsing problem."
+msgstr "しかし、万能の戦略はなく、全てはあなたがパースしたいものに依存します。"
+
+#. type: Plain text
+#: original/Tutorial.md:84
+msgid ""
+"[`parser::char::digit`]:https://docs.rs/combine/*/combine/parser/char/fn."
+"digit.html [`with`]:https://docs.rs/combine/*/combine/trait.Parser."
+"html#method.with [`skip`]:https://docs.rs/combine/*/combine/trait.Parser."
+"html#method.skip"
+msgstr ""
+"[`parser::char::digit`]:https://docs.rs/combine/*/combine/parser/char/fn.digit.html\n"
+"[`with`]:https://docs.rs/combine/*/combine/trait.Parser.html#method.with\n"
+"[`skip`]:https://docs.rs/combine/*/combine/trait.Parser.html#method.skip"
+
+#. type: Title ##
+#: original/Tutorial.md:85
+#, no-wrap
+msgid "Understanding your parsing problem"
+msgstr "パースしたいものの課題を理解する"
+
+#. type: Plain text
+#: original/Tutorial.md:92
+#, no-wrap
+msgid ""
+"Research your parsing problem. Make sure you really understand what you want to parse. If, for example you want to parse a JPEG header:\n"
+" - Is there an official specification?\n"
+" - Does the real world follow the specification? (often not 100%)\n"
+" - Search for other resources like blog posts, they may contain helpful clues. \n"
+" - Gather examples from different sources, and include them in you tests to catch problems early on.\n"
+msgstr ""
+"パースしたいものの課題を研究してください。必ずパースしたいものを本当の意味で理解するようにしてください。例えばもしJPEGヘッダをパースしたければ次のようになります。\n"
+"\n"
+"- 公式の仕様は存在していますか？\n"
+"- 現実の実装はその仕様に則っていますか？（100%ではない場合が多い）\n"
+"- ブログ記事など、他のリソースを検索してみると、役に立つヒントがあるかもしれません。\n"
+"- 様々な異なる情報源から例を集め、テストに含めることで、問題を早期に発見できます。\n"
+
+#. type: Title ##
+#: original/Tutorial.md:93
+#, no-wrap
+msgid "Sketch your desired output"
+msgstr "出力したいものをスケッチする"
+
+#. type: Plain text
+#: original/Tutorial.md:96
+msgid ""
+"Sketch the type structure that the parser should ideally return. Decide if "
+"the parser output needs to be owned (`String`, ...) or if you want to "
+"exercise zero-copy so the output references parts of the input (`&str`, ...)."
+msgstr ""
+"パーサーが理想的に返すべき型構造をスケッチしましょう。パーサーが、所有権を持"
+"つようなものを出力すべきか (`String`, ...) あるいは、出力が入力の一部を参照す"
+"るようにゼロコピーを実行したいのか (`&str`, ...) を決めます。"
+
+#. type: Title ##
+#: original/Tutorial.md:97
+#, no-wrap
+msgid "Learn by example"
+msgstr "例から学ぶ"
+
+#. type: Plain text
+#: original/Tutorial.md:100
+msgid ""
+"That was a lot of information, but you have not yet any clue on how to write "
+"parsers yet? Let's go step by step by showing little examples and explain "
+"what common problem they solve."
+msgstr "いろいろ情報がありましたが、まだパーサーの書き方について何の手がかりもないのではありませんか？それでは、少しずつ例を挙げながら、どのようなよくある課題を解決するのかを説明していきましょう。"
+
+#. type: Plain text
+#: original/Tutorial.md:102
+msgid ""
+"All parsers and combinators live in the `parser` module, even if some of "
+"them are reexported to the main module. In the following chapters, we assume "
+"`use combine::parser::*;`"
+msgstr ""
+"たとえその一部がメインモジュールに再エクスポートされたとしても、すべてのパー"
+"サーとコンビネーターは `parser` モジュールにあります。以下の章では、 `use "
+"combine::parser::*;` を使うことを前提にします。"
+
+#. type: Plain text
+#: original/Tutorial.md:104
+msgid ""
+"(Most examples use the [`char`][] module, if you are parsing bytes and not "
+"strings there is often an equivalent function in the [`byte`][] module.)"
+msgstr "（ほとんどの例では [`char`][] モジュールを使用しますが、文字列ではなくバイトをパースする場合は、[`byte`][] モジュールに同等の関数があるのでそれを使用できます。）"
+
+#. type: Plain text
+#: original/Tutorial.md:107
+msgid ""
+"[`char`]:https://docs.rs/combine/*/combine/parser/char/index.html [`byte`]:"
+"https://docs.rs/combine/*/combine/parser/byte/index.html"
+msgstr ""
+"[`char`]:https://docs.rs/combine/*/combine/parser/char/index.html\n"
+"[`byte`]:https://docs.rs/combine/*/combine/parser/byte/index.html"
+
+#. type: Title ###
+#: original/Tutorial.md:108
+#, no-wrap
+msgid "Parse constant characters/slices"
+msgstr "定型の文字列をパースする"
+
+#. type: Plain text
+#: original/Tutorial.md:111
+msgid ""
+"Often, a format contains some constant parts. You need to check for their "
+"existence, but they don't matter for the parsers output."
+msgstr ""
+"多くの場合、フォーマットはいくつかの定数部分を含んでいます。それらの存在を確"
+"認する必要がありますが、パーサーの出力には関係ありません。"
+
+#. type: Plain text
+#: original/Tutorial.md:113
+msgid ""
+"Use [`char::char('x')`][char::char] for characters and [`char::string(\"abcde"
+"\")`][char::string] (or [`range::range(\"abcde\")`][range::range] if zero-"
+"copy) for slices. The output type of these parsers is `char` and `&str` "
+"respectively."
+msgstr "文字には [`char::char('x')`][char::char] を、スライスには [`char::string(\"abcde\")`][char::string]（ゼロコピーなら [`range::range(\"abcde\")`][range::range]）を用います。これらのパーサーの出力型は、それぞれ `char` と `&str` です。"
+
+#. type: Plain text
+#: original/Tutorial.md:117
+msgid ""
+"[char::char]:https://docs.rs/combine/*/combine/parser/char/fn.char.html "
+"[char::string]:https://docs.rs/combine/*/combine/parser/char/fn.string.html "
+"[range::range]:https://docs.rs/combine/*/combine/parser/range/fn.range.html"
+msgstr ""
+"[char::char]:https://docs.rs/combine/*/combine/parser/char/fn.char.html\n"
+"[char::string]:https://docs.rs/combine/*/combine/parser/char/fn.string.html\n"
+"[range::range]:https://docs.rs/combine/*/combine/parser/range/fn.range.html"
+
+#. type: Title ###
+#: original/Tutorial.md:118
+#, no-wrap
+msgid "Parse character classes, for example whitespace"
+msgstr "空白文字などの文字クラスをパースする"
+
+#. type: Plain text
+#: original/Tutorial.md:121
+msgid ""
+"Human readable formats like JSON ignore whitespace (spaces, tabs, newlines). "
+"[`char::space`][] parses all whitespace characters according to the unicode "
+"White_Space category. Look into the `parser::char` module for more "
+"predefined character classes."
+msgstr ""
+"JSON のような人間が読める形式では、空白文字（スペース、タブ、改行）は無視され"
+"ます。[char::space`][] は、ユニコードの White_Space カテゴリに従って、すべて"
+"のホワイトスペースをパースします。その他の定義済み文字クラスについては、 "
+"`parser::char` モジュールを参照してください。"
+
+#. type: Plain text
+#: original/Tutorial.md:123
+msgid ""
+"Use [`token::satisfy`][] to define your own character classes. For example "
+"`token::satisfy(|c| c != '\\n')` parses everything except a newline. (You "
+"may not that this is in the [`token`][] module which means it works "
+"regardless of the input type)."
+msgstr "独自の文字クラスを定義するには [`item::satisfy`][] を使用します。例えば `item::satisfy(|c| c != '\\n')` は改行以外のすべてをパースします。(これが [`item`][] モジュールの中にあることにお気付きかもしれませんが、これは入力のタイプに関係なく動作することを意味します）。"
+
+#. type: Plain text
+#: original/Tutorial.md:125
+msgid "The output of each of these parsers is the `char` they have matched."
+msgstr "これらそれぞれのパーサーの出力は、それぞれがマッチさせた `char` です。"
+
+#. type: Plain text
+#: original/Tutorial.md:129
+msgid ""
+"[`char::space`]:https://docs.rs/combine/*/combine/parser/char/fn.space.html "
+"[`token::satisfy`]:https://docs.rs/combine/*/combine/parser/token/fn.satisfy."
+"html [`token`]:https://docs.rs/combine/*/combine/parser/token/index.html"
+msgstr ""
+"[`char::space`]:https://docs.rs/combine/*/combine/parser/char/fn.space.html\n"
+"[`token::satisfy`]:https://docs.rs/combine/*/combine/parser/token/fn.satisfy.html\n"
+"[`token`]:https://docs.rs/combine/*/combine/parser/token/index.html"
+
+#. type: Title ###
+#: original/Tutorial.md:130
+#, no-wrap
+msgid "Parse consecutive whitespace or words"
+msgstr "連続した空白または単語を解析する"
+
+#. type: Plain text
+#: original/Tutorial.md:133
+msgid ""
+"All the above parsers match just a single letter. Sometimes we want to parse "
+"words or consecutive whitespace. This can be done by using the parser "
+"combinators from [`repeat`][]."
+msgstr "上記のパーサーはすべて1文字にのみマッチします。時には、単語や連続した空白を解析したいこともあります。これは [`repeat`][] のパーサコンビネータを使用することで実現できます。"
+
+#. type: Plain text
+#: original/Tutorial.md:140
+#, no-wrap
+msgid ""
+"If you want to ignore the matched characters, you can use `repeat::skip_*` functions:\n"
+" - `skip_many(space())` - 0 or more whitespace characters (same as `char::spaces()`)\n"
+" - `skip_many1(space())` - 1 or more whitespace characters\n"
+" - `skip_count(4, space())` - exactly 4 whitespace characters\n"
+" - `skip_count_min_max(1, 4, space())` - 1 to 4 whitespace characters\n"
+" - `skip_until(token::satisfy(|c| c != '\\n'))` - everything until the end of line\n"
+msgstr ""
+"マッチした文字列を無視したい場合は`repeat::skip_*`関数を使うことができます。\n"
+"\n"
+"- `skip_many(space())` - 0 個以上の空白文字列 (`char::spaces()`と同じ)\n"
+"- `skip_many1(space())` - 1 個以上の空白文字列\n"
+"- `skip_count(4, space())` - ちょうど4個の空白文字列\n"
+"- `skip_count_min_max(1, 4, space())` - 1〜4 個の空白文字列\n"
+"- `skip_until(item::satisfy(|c| c != '\\n'))` - 行末までの全て\n"
+
+#. type: Plain text
+#: original/Tutorial.md:142
+msgid ""
+"The `skip_*` combinators have the output type `()`, but they nonetheless "
+"consume from the input stream."
+msgstr ""
+"`skip_*` コンビネータは出力型に`()`を持ちますが、それにもかかわらず入力スト"
+"リームから消費されます。"
+
+#. type: Plain text
+#: original/Tutorial.md:144
+msgid ""
+"On the other hand, if you want to have the consumed slice as output, things "
+"are more complicated. [`repeat::many`][] works and can easily be used to "
+"collect into a `String`, `Vec` or any other type that implements `Extend`. "
+"However, for collecting single characters it may not be performant enough."
+msgstr "一方、消費されたスライスを出力にしたい場合は、より複雑になります。そのためには[repeat::many`][] はで実現でき、 `String` や `Vec` などの `Extend` を実装している型に簡単に取り込むことができます。しかし、1文字を収集するためには、十分なパフォーマンスを発揮できないかもしれません。"
+
+#. type: Plain text
+#: original/Tutorial.md:146
+msgid ""
+"Thus there are some additional alternatives, depending on how you can "
+"describe the characters to consume."
+msgstr ""
+"このように、あなたがどのように文字を消費できるかによっていくつかの選択肢が追"
+"加されます。"
+
+#. type: Bullet: ' - '
+#: original/Tutorial.md:150
+msgid ""
+"`range::recognize(repeat::skip_many1(char::letter()))` - Use this if you "
+"want to describe the range of interest as a combination of other parsers. "
+"Because the output of the inner parsers doesn't matter, you can use the "
+"`skip_*` combinators. [`range::recognize`][] will then look at what has been "
+"consumed by its inner parser(s) and use that range/slice as its output."
+msgstr "`range::recognize(repeat::skip_many1(char::letter()))`は対象の範囲を他のパーサーと組み合わせて記述したい場合に利用します。内部のパーサーの出力は重要ではないので、 `skip_*` コンビネーターが使用できます。[range::recognize`][] は内部のパーサーによって消費されたものを見て、その範囲やスライスを出力として使用します。"
+
+#. type: Bullet: ' - '
+#: original/Tutorial.md:150
+msgid ""
+"`range::take_while1(|c| c.is_alphabetic())` - Here you can inspect "
+"characters using a closure. Similar to `skip_until(item::satisfy(..))` (but "
+"inverse logic)."
+msgstr "`range::take_while1(|c| c.is_alphabetic())`はクロージャを使用して文字を検査することができます。`skip_until(item::satisfy(...))` に似ています（ただし反対のロジックです）。"
+
+#. type: Bullet: ' - '
+#: original/Tutorial.md:150
+msgid ""
+"`range::take_until_range(\">>>\")` - Wait for a constant and return "
+"everything that has been consumed before that constant occurred."
+msgstr ""
+"`range::take_until_range(\">>\")` - 定数値を待ち、その定数値に出会う前に消費"
+"されたものを全て返します。"
+
+#. type: Plain text
+#: original/Tutorial.md:152
+msgid ""
+"(These parsers and more like them all exist in the [`range`][] module which "
+"contains parsers specialized to zero-copy input such as `[u8]` and `str`, if "
+"you have a different input you may need to make do with [`repeat::many`][]"
+msgstr "（これらのパーサーや似たようなものは全て [`range`][] モジュールに含まれています。このモジュールには `[u8]` や `str` といったゼロコピー入力に特化したパーサーが含まれており、もし別の入力を想定しているのならば [`repeat::many`][] を使ってください。）"
+
+#. type: Plain text
+#: original/Tutorial.md:157
+msgid ""
+"[`repeat`]:https://docs.rs/combine/*/combine/parser/repeat/index.html "
+"[`repeat::many`]:https://docs.rs/combine/*/combine/parser/repeat/fn.many."
+"html [`range::recognize`]:https://docs.rs/combine/*/combine/parser/range/fn."
+"recognize.html [`range`]:https://docs.rs/combine/*/combine/parser/range/"
+"index.html"
+msgstr ""
+"[`repeat`]:https://docs.rs/combine/*/combine/parser/repeat/index.html\n"
+"[`repeat::many`]:https://docs.rs/combine/*/combine/parser/repeat/fn.many.html\n"
+"[`range::recognize`]:https://docs.rs/combine/*/combine/parser/range/fn.recognize.html\n"
+"[`range`]:https://docs.rs/combine/*/combine/parser/range/index.html"
+
+#. type: Title ###
+#: original/Tutorial.md:158
+#, no-wrap
+msgid "Transforming the output"
+msgstr "出力の変換"
+
+#. type: Plain text
+#: original/Tutorial.md:161
+msgid ""
+"At any time, you can manipulate the output value. You can for example drop "
+"some parts of it or parse a `&str` made of digits to an `u32`."
+msgstr ""
+"いつでも出力値を操作できます。例えば、ある部分を削除したり、数字で構成された "
+"`&str` を `u32` にパースできます。"
+
+#. type: Plain text
+#: original/Tutorial.md:163
+msgid ""
+"The relevant functions are part of the [`Parser`][] trait, so you use the `."
+"` notation: `digit().map(|d| d)`."
+msgstr ""
+"関連する関数は [`Parser`][] trait に含まれているので、 `.` 記法を使用します: "
+"`digit().map(|d| d)`."
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:164
+#, no-wrap
+msgid ""
+"    fn map<>(self, f: impl FnMut(O) -> B) -> impl Parser<Output = B> {}\n"
+"    fn and_then<>(self, f: impl FnMut(O) -> Result<B, S_ERR>) -> impl Parser<Output = B> {}\n"
+"    fn flat_map<>(self, f: impl FnMut(O) -> Result<B, P_ERR>) -> impl Parser<Output = B> {}\n"
+msgstr ""
+"    fn map<>(self, f: impl FnMut(O) -> B) -> impl Parser<Output = B> {}\n"
+"    fn and_then<>(self, f: impl FnMut(O) -> Result<B, S_ERR>) -> impl Parser<Output = B> {}\n"
+"    fn flat_map<>(self, f: impl FnMut(O) -> Result<B, P_ERR>) -> impl Parser<Output = B> {}\n"
+
+#. type: Plain text
+#: original/Tutorial.md:171
+msgid ""
+"The return value of these three functions is a parser again. This is similar "
+"to calling `map()` on an `std::iter::Iterator`, which returns an `impl "
+"Iterator` again. Like `Iterator`, after combining all the parsers, you have "
+"not parsed anything yet, just created an instance of a type that is able to "
+"parse your input. Just like iterating starts when calling `next()`, parsing "
+"starts when calling `parse*()`."
+msgstr ""
+"これら 3 つの関数の戻り値は、再びパーサーとなります。これは、 `std::iter::"
+"Iterator` に対して `map()` を呼び出すと、再び `impl Iterator` が返されるのと"
+"似ています。`Iterator`と同様に、すべてのパーサーを結合した後は、まだ何もパー"
+"スしておらず入力をパースすることができる型のインスタンスを作成しただけになり"
+"ます。イテレートが`next()`を呼び出したときに始まるように、パースも`parse"
+"\\*()` を呼び出したときに開始されます。"
+
+#. type: Plain text
+#: original/Tutorial.md:185
+#, no-wrap
+msgid ""
+"What is the difference between these functions and when to use them?\n"
+" - `map()` allows you to map the output to another type. For example you can convert a `&str` to a `String`, or move some values from tuple form into a custom struct. The closure is not able to return an error.\n"
+"     + `(a(), b()).map(|(a, b)| MyType { a: a, b: b} )`\n"
+"     + `recognize(skip_many1(letter())).map(|s| s.to_string())`\n"
+" - `and_then()` is the most capable of the three functions. In contrast to `map()`, the closure returns a `Result<>`. Use this if your transformation may fail, for example if you want to parse some digits into a numeric type. \n"
+"     + `recognize(skip_many1(digit())).and_then(|digits : &str| digits.parse::<u32>().map_err(StreamErrorFor::<I>::other) )` (This could also be written with [`from_str(recognize(skip_many1(digit())))`][`from_str`])\n"
+"     + You can use any constructor of the `error::StreamError` trait to create an error. The most helpful constructors are:\n"
+"         * `StreamErrorFor::<I>::other(some_std_error)`\n"
+"         * `StreamErrorFor::<I>::message_message(format!(\"{}\", xyz))`\n"
+"         * `StreamErrorFor::<I>::message_static_message(\"Not supported\")`\n"
+" - `flat_map()` is very similar to `and_then()`, but they differ in the error type the closure must return. Use `flat_map()` if you want to parse some output in more detail with another parser. (see its documentation)\n"
+"     + `and_then()` takes an `error::StreamError` where as `flat_map()` takes an `error::ParseError`.\n"
+"     + `and_then()` will add position information to the error automatically, for `flat_map()` you have to take care of that yourself. You may need to transform the position information.\n"
+msgstr ""
+
+#. type: Plain text
+#: original/Tutorial.md:188
+msgid ""
+"[`Parser`]:https://docs.rs/combine/*/combine/trait.Parser.html [`from_str`]:"
+"https://docs.rs/combine/*/combine/fn.from_str.html"
+msgstr ""
+"[`Parser`]:https://docs.rs/combine/*/combine/trait.Parser.html\n"
+"[`from_str`]:https://docs.rs/combine/*/combine/fn.from_str.html"
+
+#. type: Title ###
+#: original/Tutorial.md:189
+#, no-wrap
+msgid "Dynamic parsing"
+msgstr "動的なパース"
+
+#. type: Plain text
+#: original/Tutorial.md:192
+msgid ""
+"You often need to choose a child parser depending on some condition. For "
+"example in JSON, you want to parse a list of objects after a `[` and a list "
+"of key/object pairs after a `{`. Or you want to parse an escaped string "
+"after a `\"` and a number when you encounter a digit. This is most easily "
+"done with [`choice::choice`][] which takes a tuple of parsers and tries to "
+"parse each of them in turn, returning the output of the first successful one."
+msgstr "何らかの条件によって子パーサを選択する必要があることはよくあります。例えば JSON の場合、`[`の後にはオブジェクトのリストを、`{`の後にはキーとオブジェクトのペアのリストをパーズしたいでしょう。あるいは、数字が来たときに`\"`と数が続くようなエスケープされた文字列パースしたくなるでしょう。これは [`choice::choice`][] を使用することで簡単に行うことができます。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:193
+#, no-wrap
+msgid ""
+"choice::choice( (\n"
+"    char::char('{').with( parse_key_value_pairs() ),\n"
+"    char::char('[').with( parse_list() ),\n"
+") )\n"
+"// The error will look like this:\n"
+"//   Unexpected `<`\n"
+"//   Expected `{` or `[`\n"
+msgstr ""
+"choice::choice( (\n"
+"    char::char('{').with( parse_key_value_pairs() ),\n"
+"    char::char('[').with( parse_list() ),\n"
+") )\n"
+"// The error will look like this:\n"
+"//   Unexpected `<`\n"
+"//   Expected `{` or `[`\n"
+
+#. type: Plain text
+#: original/Tutorial.md:204
+msgid ""
+"Note that `choice` only attempts the next parser if the previous parser "
+"failed to parse the very first token that was fed to it."
+msgstr "なお、`choice` は、前のパーサーが最初に送られたトークンのパースに失敗した場合にのみ、次のパーサーを試します。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:205
+#, no-wrap
+msgid ""
+"choice::choice( (\n"
+"    char::string(\"abc\"),\n"
+"    char::string(\"a12\")\n"
+") )\n"
+"// If we feed this parser with \"a12\" it will not succeed as the first parser only failed after already having found a 'a' successfully\n"
+msgstr ""
+"choice::choice( (\n"
+"    char::string(\"abc\"),\n"
+"    char::string(\"a12\")\n"
+") )\n"
+"// このパーサーに「a12」を与えても、最初のパーサーが「a」をうまく見つけた後に失敗しただけなので、成功しないでしょう。\n"
+
+#. type: Plain text
+#: original/Tutorial.md:214
+msgid ""
+"To fix this we need to use [`combinator::attempt`][] which makes the wrapped "
+"parser act as if it always failed on the first token. (Note that this can be "
+"slower and provide worse error messages so avoid using `attempt` unless it "
+"is necessary)."
+msgstr "これを解決するには、[`combinator::attempt`][]を使用する必要があります。これはラップされたパーサーが、常に最初のトークンで失敗したように動作するようにするものです。 (なおこの動作は遅くなり、エラーメッセージも悪くなるので、必要でない限り `attempt` を使わないようにしましょう)。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:215
+#, no-wrap
+msgid ""
+"choice::choice( (\n"
+"    combinator::attempt(char::string(\"abc\")),\n"
+"    combinator::attempt(char::string(\"a12\"))\n"
+") )\n"
+"// OK: Parsed \"a12\"\n"
+msgstr ""
+"choice::choice( (\n"
+"    combinator::attempt(char::string(\"abc\")),\n"
+"    combinator::attempt(char::string(\"a12\"))\n"
+") )\n"
+"// OK: Parsed \"a12\"\n"
+
+#. type: Plain text
+#: original/Tutorial.md:224
+msgid ""
+"[`Parser::or`][] works the same as `choice` and can be useful when there are "
+"only two alternatives."
+msgstr "[`Parser::or`][] は、選択肢が2つのみの場合、choice を使いやすく使えるものです。"
+
+#. type: Plain text
+#: original/Tutorial.md:228
+msgid ""
+"[`choice::choice`]:https://docs.rs/combine/*/combine/parser/choice/fn.choice."
+"html [`combinator::attempt`]:https://docs.rs/combine/*/combine/parser/"
+"combinator/fn.attempt.html [`Parser::or`]:https://docs.rs/combine/*/combine/"
+"trait.Parser.html#method.or"
+msgstr ""
+"[`choice::choice`]:https://docs.rs/combine/*/combine/parser/choice/fn.choice.html\n"
+"[`combinator::attempt`]:https://docs.rs/combine/*/combine/parser/combinator/fn.attempt.html\n"
+"[`Parser::or`]:https://docs.rs/combine/*/combine/trait.Parser.html#method.or"
+
+#. type: Title ###
+#: original/Tutorial.md:229
+#, no-wrap
+msgid "Repeating elements"
+msgstr "繰り返す要素"
+
+#. type: Plain text
+#: original/Tutorial.md:232
+msgid "Often, you have repeating elements, for example a list of numbers."
+msgstr "多くの場合、例えば数字のリストなど、繰り返される要素があります。"
+
+#. type: Plain text
+#: original/Tutorial.md:234
+msgid ""
+"First, you need a parser for a single element of that list: `let hexbyte = "
+"( hexdigit(), hexdigit() );`"
+msgstr "まず、そのリストの1つの要素に対するパーサーが必要です。ここでは`let hexbyte = ( hexdigit(), hexdigit() );`とします。"
+
+#. type: Plain text
+#: original/Tutorial.md:244
+#, no-wrap
+msgid ""
+"Then you can use one of the following combinators to collect multiple occurrences of that element:\n"
+" - `repeat::count(4, hexbyte);` - 0 to 4 hexadecimal bytes\n"
+" - `repeat::count_min_max(1, 4, hexbyte)` - 1 to 4 hexadecimal bytes\n"
+" - `repeat::many(hexbyte)` - 0 or more hexadecimal bytes\n"
+" - `repeat::many1(hexbyte)` - 1 or more hexadecimal bytes\n"
+" - `repeat::sep_by(hexbyte, ',')`  - 0 or more hexadecimal bytes, separated by `,`\n"
+" - `repeat::sep_by1(hexbyte, ',')`  - 1 or more hexadecimal bytes, separated by `,`\n"
+" - `repeat::sep_end_by(hexbyte, ',')`  - 0 or more hexadecimal bytes, all followed by `,`\n"
+" - `repeat::sep_end_by1(hexbyte, ',')`  - 1 or more hexadecimal bytes, all followed by `,`\n"
+msgstr ""
+"そして出現する複数の要素を集める以下のコンビネータを使うことができます。\n"
+"\n"
+"- `repeat::count(4, hexbyte);` - 0 ～ 4 バイトの 16 進数\n"
+"- `repeat::count_min_max(1, 4, hexbyte)` - 1 ～ 4 バイトの 16 進数\n"
+"- `repeat::many(hexbyte)` - 0 バイト以上の 16 進数\n"
+"- `repeat::many1(hexbyte)` - 1 バイト以上の 16 進数\n"
+"- `repeat::sep_by(hexbyte, ',')` - `,` で区切られた、0 バイト以上の 16 進数\n"
+"- `repeat::sep_by1(hexbyte, ',')` - `,` で区切られた、1 バイト以上の 16 進数\n"
+"- `repeat::sep_end_by(hexbyte, ',')` - `,` が付随している、0 バイト以上の 16 進数\n"
+"- `repeat::sep_end_by1(hexbyte, ',')` - `,` が付随している、1 バイト以上の 16 進数\n"
+
+#. type: Plain text
+#: original/Tutorial.md:246
+#, no-wrap
+msgid "The parser output of each element will be collected into a type that implements `std::iter::Extend<TheNestedParser::Output>` and `std::default::Default`. You can use `Vec`, `HashMap` or `HashSet` for this purpose or even write your own collection. You must always give a type hint, so the combinator knows which collection to use. The best way to do this is to call `.map(|m : Vec<_>| m)` on the collecting combinator.\n"
+msgstr "各要素のパーサ出力は `std::iter::Extend<TheNestedParser::Output>` と `std::default::Default` を実装した型に収集されます。繰り返しを扱うために、`Vec`、`HashMap`、`HashSet` を使用でき、または独自のコレクション型を記述することもできます。常に型ヒントを与えて、コンビネータがどのコレクションを使用するかを知らせる必要があります。そのためには収集するコンビネータに対して `.map(|m : Vec<_>| m)` を呼び出すのがもっともよい方法です。\n"
+
+#. type: Plain text
+#: original/Tutorial.md:248
+msgid "The following example counts the tools in the inventory list."
+msgstr "次の例はインベントリリストにある tool を数える例です。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:249
+#, no-wrap
+msgid ""
+"# use std::collections::HashMap;\n"
+"# use combine::parser::range::{range, take_while1};\n"
+"# use combine::parser::repeat::{sep_by};\n"
+"# use combine::parser::Parser;\n"
+"# \n"
+"#[derive(Default, Debug)]\n"
+"struct Tools<'a> (HashMap<&'a str, u32>);\n"
+"\n"
+"impl<'a> std::iter::Extend<&'a str> for Tools<'a> {\n"
+"    fn extend<T : IntoIterator<Item = &'a str>> (&mut self, iter : T) {\n"
+"        for tool in iter.into_iter() {\n"
+"            let counter = self.0.entry(tool).or_insert(0);\n"
+"            *counter += 1;\n"
+"        }\n"
+"    }\n"
+"}\n"
+"\n"
+"let input = \"Hammer, Saw, Drill, Hammer\";\n"
+"\n"
+"let tool = take_while1(|c : char| c.is_alphabetic());\n"
+"let mut tools = sep_by(tool, range(\", \")).map(|m: Tools| m);\n"
+"\n"
+"let output = tools.easy_parse(input).unwrap().0;\n"
+"// Tools({\"Saw\": 1, \"Hammer\": 2, \"Drill\": 1})\n"
+"\n"
+msgstr ""
+"# use std::collections::HashMap;\n"
+"# use combine::parser::range::{range, take_while1};\n"
+"# use combine::parser::repeat::{sep_by};\n"
+"# use combine::parser::Parser;\n"
+"# \n"
+"#[derive(Default, Debug)]\n"
+"struct Tools<'a> (HashMap<&'a str, u32>);\n"
+"\n"
+"impl<'a> std::iter::Extend<&'a str> for Tools<'a> {\n"
+"    fn extend<T : IntoIterator<Item = &'a str>> (&mut self, iter : T) {\n"
+"        for tool in iter.into_iter() {\n"
+"            let counter = self.0.entry(tool).or_insert(0);\n"
+"            *counter += 1;\n"
+"        }\n"
+"    }\n"
+"}\n"
+"\n"
+"let input = \"Hammer, Saw, Drill, Hammer\";\n"
+"\n"
+"let tool = take_while1(|c : char| c.is_alphabetic());\n"
+"let mut tools = sep_by(tool, range(\", \")).map(|m: Tools| m);\n"
+"\n"
+"let output = tools.easy_parse(input).unwrap().0;\n"
+"// Tools({\"Saw\": 1, \"Hammer\": 2, \"Drill\": 1})\n"
+"\n"
+
+#. type: Title ###
+#: original/Tutorial.md:277
+#, no-wrap
+msgid "Finding the output type"
+msgstr "出力の型を見つける"
+
+#. type: Plain text
+#: original/Tutorial.md:280
+msgid ""
+"The output type of all combinators is stated in the documentation, albeit a "
+"little hidden."
+msgstr ""
+"すべての combinators の出力型は、少し隠れていますがドキュメントに記載されてい"
+"ます。"
+
+#. type: Plain text
+#: original/Tutorial.md:282
+#, no-wrap
+msgid "First, go to the documentation of the combinator [`repeat::many`][]. Click on the return type, here [`combine::parser::repeat::Many`](https://docs.rs/combine/*/combine/parser/repeat/struct.Many.html). Expand the `impl<..> Parser for X` section. Then you find the exact type next to `type Output`.\n"
+msgstr "まず、コンビネーター [`repeat::many`][] のドキュメントにアクセスします。戻り値の型をクリックして、ここでは [`combine::parser::repeat::Many`] (https://docs.rs/combine/*/combine/parser/repeat/struct.Many.html) を選びます `impl<...> Parser for X` セクションを展開します。すると、`type Output`の隣にお目当ての型が見つかります。\n"
+
+#. type: Plain text
+#: original/Tutorial.md:284
+#, no-wrap
+msgid "In case of `many`, this type is `F`, meaning that you can choose any type (via a type hint via `.map()`) as long as it implements `Extend<P::Output> + Default`.\n"
+msgstr "`many` の場合、この型は `F` です。つまり、 `Extend<P::Output> + Default` を実装していれば、どんな型でも (`.map()` による型ヒントを介して) 選択することができるのです。\n"
+
+#. type: Plain text
+#: original/Tutorial.md:286
+#, no-wrap
+msgid "Another example: `range::recognize` has the output `type Output = <P::Input as StreamOnce>::Range`. Your `Range` type is probably `&str` or `&[u8]`, but you can look up your exact range type in the two tables in the [input machinery](Input-Machinery) documentation.\n"
+msgstr "他の例: `range::recognize` は `type Output = <P::Input as StreamOnce>::Range` という出力を持っています。`Range`の型はおそらく`&str`か`&[u8]` ですが、正確な型は [input machinery](Input-Machinery) のドキュメントにある 2 つの表で調べることができます。\n"
+
+#. type: Title ###
+#: original/Tutorial.md:287
+#, no-wrap
+msgid "Miscellaneous"
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Tutorial.md:292
+msgid "[`parser1.and(parser2)`][] is a shortcut for `(parser1, parser2)`"
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Tutorial.md:292
+msgid "[`choice::optional`][] can be helpful."
+msgstr ""
+
+#. type: Bullet: ' - '
+#: original/Tutorial.md:292
+msgid "[`repeat::escaped`][] helps parsing escaped strings."
+msgstr ""
+
+#. type: Plain text
+#: original/Tutorial.md:296
+msgid ""
+"[`parser1.and(parser2)`]::https://docs.rs/combine/*/combine/trait.Parser."
+"html#method.and [`choice::optional`]:https://docs.rs/combine/*/combine/"
+"parser/choice/fn.optional.html [`repeat::escaped`]:https://docs.rs/combine/*/"
+"combine/parser/repeat/fn.escaped.html"
+msgstr ""
+"[`parser1.and(parser2)`]::https://docs.rs/combine/*/combine/trait.Parser.html#method.and\n"
+"[`choice::optional`]:https://docs.rs/combine/*/combine/parser/choice/fn.optional.html\n"
+"[`repeat::escaped`]:https://docs.rs/combine/*/combine/parser/repeat/fn.escaped.html"
+
+#. type: Title ##
+#: original/Tutorial.md:297
+#, no-wrap
+msgid "Going forward"
+msgstr ""
+
+#. type: Plain text
+#: original/Tutorial.md:300
+msgid ""
+"I recommend to take some to browse through the parsers and combinators from "
+"the `parser` module. This tutorial only mentioned the most important ones, "
+"but the more you know the parser toolbox, the better your parsers become."
+msgstr "少し時間を取って`parser` モジュールのパーサーとコンビネーターに目を通しておくことをお勧めします。このチュートリアルでは最も重要なものだけを取り上げましたが、パーサの道具を知れば知るほど、あなたのパーサはより良くなります。"
+
+#. type: Plain text
+#: original/Tutorial.md:302
+msgid ""
+"Also, take a look at the `examples` folder to see the concepts in action."
+msgstr "また、実装の中でこのコンセプトが実際にどう動くかは examples フォルダをご覧ください。"
+
+#. type: Title ##
+#: original/Tutorial.md:304
+#, no-wrap
+msgid "Other input types"
+msgstr "その他の入力の型"
+
+#. type: Title ###
+#: original/Tutorial.md:306
+#, no-wrap
+msgid "Parsing `&[u8]`"
+msgstr "`&[u8]` のパース"
+
+#. type: Plain text
+#: original/Tutorial.md:309
+msgid ""
+"Use the parsers from `parser::byte` instead of the parsers from `parser::"
+"char`."
+msgstr "`parser::char` の代わりに `parser::byte` を使いましょう。"
+
+#. type: Plain text
+#: original/Tutorial.md:311
+msgid ""
+"`parser::byte::num` helps parsing binary numbers with the correct endianess."
+msgstr "`parser::byte::num` は、正しいエンディアンで2進数をパースするのに役立ちます。"
+
+#. type: Title ###
+#: original/Tutorial.md:312
+#, no-wrap
+msgid "Parsing `&[T]`"
+msgstr "`&[T]` のパース"
+
+#. type: Plain text
+#: original/Tutorial.md:315
+msgid ""
+"Use the parsers from `parser::item` instead of the parsers from `parser::"
+"char`."
+msgstr "`parser::char`パーサーの代わりに `parser::item`のパーサーを使いましょう。 "
+
+#. type: Title ###
+#: original/Tutorial.md:316
+#, no-wrap
+msgid "Parsing from Iterators or `std::io::Read`"
+msgstr "イテレータ、もしくは `std::io::Read` をパースする"
+
+#. type: Plain text
+#: original/Tutorial.md:319
+msgid "See the chapter \"Input Machinery\" for more information on the setup."
+msgstr "設定の詳細は「入力のからくり」の章をご覧ください。"
+
+#. type: Plain text
+#: original/Tutorial.md:321
+msgid ""
+"The main difference in relation to the slice based input types is that the "
+"input is not `RangeStream`, but only a `Stream`. You need to adapt the "
+"`where` clause in all your parsers function definitions."
+msgstr ""
+"slice ベースの入力タイプとの主な違いは、入力が `RangeStream` ではなく、単な"
+"る `Stream` であることです。すべてのパーサーの関数定義で `where` 節を適用する"
+"必要があります。"
+
+#. type: Fenced code block (rust)
+#: original/Tutorial.md:322
+#, no-wrap
+msgid ""
+"# use combine::parser::*;\n"
+"# use combine::parser::Parser;\n"
+"# use combine::stream::{Stream};\n"
+"# use combine::error::ParseError;\n"
+"# \n"
+"fn tools<'a, I>() -> impl Parser<Input = I, Output = Vec<Vec<u8>>>\n"
+"where I: Stream<Item = u8>,\n"
+"      I::Error: ParseError<I::Item, I::Range, I::Position>,\n"
+"{\n"
+"    let tool = repeat::many(byte::letter()).map(|m : Vec<u8>| m);\n"
+"    repeat::sep_by(tool, (byte::byte(b','), byte::byte(b' ')))\n"
+"}\n"
+msgstr ""
+"# use combine::parser::*;\n"
+"# use combine::parser::Parser;\n"
+"# use combine::stream::{Stream};\n"
+"# use combine::error::ParseError;\n"
+"# \n"
+"fn tools<'a, I>() -> impl Parser<Input = I, Output = Vec<Vec<u8>>>\n"
+"where I: Stream<Item = u8>,\n"
+"      I::Error: ParseError<I::Item, I::Range, I::Position>,\n"
+"{\n"
+"    let tool = repeat::many(byte::letter()).map(|m : Vec<u8>| m);\n"
+"    repeat::sep_by(tool, (byte::byte(b','), byte::byte(b' ')))\n"
+"}\n"
+
+#. type: Plain text
+#: original/Tutorial.md:337
+msgid ""
+"Without a `RangeStream`, the `range` module is not usable. You can't return "
+"slice references to your input either. (This makes `many(letter())` "
+"idiomatic again.)"
+msgstr "`RangeStream` がなければ、`range`モジュールを使用することはできません。また、入力に対するスライス参照を返すこともできません。（そのためここでも `many(letter())` がイディオムになります。）"
+
+#, fuzzy, no-wrap
+#~ msgid "https://github.com/Marwes/combine/wiki"
+#~ msgstr "https://github.com/Marwes/combine/wiki"
+
+#, fuzzy, no-wrap
+#~ msgid "Home"
+#~ msgstr "Home"
+
+#, fuzzy
+#~ msgid ""
+#~ "Every parser in every language needs roughly these four things to work:"
+#~ msgstr "様々な言語で実装される様々なパーサーには次の 4 つを必要とします。"
+
+#, fuzzy
+#~ msgid "It may also support one or more of these extra functionalities"
+#~ msgstr "また、次の追加機能のサポートも必要とするでしょう。"
+
+#, fuzzy
+#~ msgid ""
+#~ "- [nom](https://crates.io/crates/nom)  - [pest](https://crates.io/crates/"
+#~ "pest)  - [lalrpop](https://crates.io/crates/lalrpop)"
+#~ msgstr ""
+#~ "- [nom](https://crates.io/crates/nom)  - [pest](https://crates.io/crates/"
+#~ "pest)  - [lalrpop](https://crates.io/crates/lalrpop)"
+
+#, fuzzy, no-wrap
+#~ msgid "https://github.com/Marwes/combine/wiki/Tutorial"
+#~ msgstr "https://github.com/Marwes/combine/wiki/Tutorial"
+
+#, fuzzy, no-wrap
+#~ msgid "Tutorial "
+#~ msgstr "Tutorial"
+
+#, fuzzy
+#~ msgid ""
+#~ "Only chaining parsers using tuples would make the output type very "
+#~ "complicated very soon as the output would be an equally large tuple. "
+#~ "Fortunately, we have several options to remedy this:"
+#~ msgstr ""
+#~ "タプルを使ってパーサーを連結するだけでは、出力が同じように大きなタプルにな"
+#~ "るためすぐに出力型が非常に複雑になります。幸いなことに、これを解決するため"
+#~ "のいくつかの選択肢があります。"
+
+#, fuzzy
+#~ msgid ""
+#~ "Drop (unneeded) parts of the output type by mapping or processing it: "
+#~ "`let first_digit = (digit(), digit()).map(|(digit1, _digit2)| digit1);` "
+#~ "Note: There are often more expressive helpers like [`skip`][] or [`with`]"
+#~ "[]: `let first_digit = digit().skip(digit());`"
+#~ msgstr ""
+#~ "出力された型をマッピングまたは加工することで、(不要な)部分を削除。 (例): "
+#~ "`let first_digit = (digit(), digit()).map(|(digit1, _digit2)| digit1);` "
+#~ "(注意)：[`skip`][] や [`with`][] など、より表現力のあるヘルパーもありま"
+#~ "す： `let first_digit = digit().skip(digit());`"
+
+#, fuzzy
+#~ msgid "Collect repeating elements into a `Vec` or similar."
+#~ msgstr "繰り返しの要素を `Vec` などにまとめる。"
+
+#, fuzzy
+#~ msgid ""
+#~ "Ignoring a complicated output type and instead taking a `&str` slice of "
+#~ "what has been consumed: `let two_digits_str = recognize( (digit(), "
+#~ "digit()) );`"
+#~ msgstr ""
+#~ "複雑な出力型を無視し、代わりに消費された `&str` スライスを取得。`let "
+#~ "two_digits_str = recognize( (digit(), digit()) );`"
+
+#, fuzzy
+#~ msgid ""
+#~ "Assemble your (complex/recursive) output type, for example `json::Value`."
+#~ msgstr ""
+#~ "(複雑な/再帰的な)出力タイプを組み立てる、例えば `json::Value` など。"
+
+#, fuzzy
+#~ msgid ""
+#~ "Research your parsing problem. Make sure you really understand what you "
+#~ "want to parse. If, for example you want to parse a JPEG header:"
+#~ msgstr ""
+#~ "あなたのパースに関する課題を研究しましょう。何をパースしたいのかを本当に理"
+#~ "解しているか確認してください。例えば、あなたが JPEG のヘッダーを解析したい"
+#~ "場合、"
+
+#, fuzzy
+#~ msgid ""
+#~ "If you want to ignore the matched characters, you can use `repeat::"
+#~ "skip_*` functions:"
+#~ msgstr ""
+#~ "マッチした文字を無視したい場合は、 `repeat::skip_*` 関数を使用できます。"
+
+#, fuzzy
+#~ msgid "What is the difference between these functions and when to use them?"
+#~ msgstr "これらの機能の違いはなにか、どのような場合に使うのでしょうか。"
+
+#, fuzzy
+#~ msgid ""
+#~ "`map()` allows you to map the output to another type. For example you can "
+#~ "convert a `&str` to a `String`, or move some values from tuple form into "
+#~ "a custom struct. The closure is not able to return an error."
+#~ msgstr ""
+#~ "`map()` は、出力を別の型にマップすることができます。例えば、 `&str` を "
+#~ "`String` に変換したり、タプル型からカスタム構造体に値を移動させたりするこ"
+#~ "とができます。このクロージャはエラーを返すことができません。"
+
+#, fuzzy
+#~ msgid "`(a(), b()).map(|(a, b)| MyType { a: a, b: b} )`"
+#~ msgstr "`(a(), b()).map(|(a, b)| MyType { a: a, b: b} )`"
+
+#, fuzzy
+#~ msgid "`recognize(skip_many1(letter())).map(|s| s.to_string())`"
+#~ msgstr "`recognize(skip_many1(letter())).map(|s| s.to_string())`"
+
+#, fuzzy
+#~ msgid ""
+#~ "`and_then()` is the most capable of the three functions. In contrast to "
+#~ "`map()`, the closure returns a `Result<>`. Use this if your "
+#~ "transformation may fail, for example if you want to parse some digits "
+#~ "into a numeric type."
+#~ msgstr ""
+#~ "`and_then()`は、3 つの関数の中で最も高機能な関数です。`map()`とは対照的"
+#~ "に、クロージャは`Result<>` を返します。例えば、いくつかの数字を数値型に"
+#~ "パースする場合など、変換に失敗する可能性がある場合に使用します。"
+
+#, fuzzy
+#~ msgid ""
+#~ "`recognize(skip_many1(digit())).and_then(|digits : &str| digits.parse::"
+#~ "<u32>().map_err(StreamErrorFor::<I>::other) )` (This could also be "
+#~ "written with [`from_str(recognize(skip_many1(digit())))`][`from_str`])"
+#~ msgstr ""
+#~ "`recognize(skip_many1(digit())).and_then(|digits : &str| digits.parse::"
+#~ "<u32>().map_err(StreamErrorFor::<I>::other) )` （これは "
+#~ "[`from_str(recognize(skip_many1(digit()))`][`from_str`] とも書けます）。"
+
+#, fuzzy
+#~ msgid ""
+#~ "You can use any constructor of the `error::StreamError` trait to create "
+#~ "an error. The most helpful constructors are:"
+#~ msgstr ""
+#~ "エラーを作成するには、`error::StreamError` トレイトの任意のコンストラクタ"
+#~ "を使用できます。最も役に立つコンストラクタは次のものです。"
+
+#, fuzzy
+#~ msgid "`StreamErrorFor::<I>::other(some_std_error)`"
+#~ msgstr "`StreamErrorFor::<I>::other(some_std_error)`"
+
+#, fuzzy
+#~ msgid "`StreamErrorFor::<I>::message_message(format!(\"{}\", xyz))`"
+#~ msgstr "`StreamErrorFor::<I>::message_message(format!(\"{}\", xyz))`"
+
+#, fuzzy
+#~ msgid "`StreamErrorFor::<I>::message_static_message(\"Not supported\")`"
+#~ msgstr "`StreamErrorFor::<I>::message_static_message(\"Not supported\")`"
+
+#, fuzzy
+#~ msgid ""
+#~ "`flat_map()` is very similar to `and_then()`, but they differ in the "
+#~ "error type the closure must return. Use `flat_map()` if you want to parse "
+#~ "some output in more detail with another parser. (see its documentation)"
+#~ msgstr ""
+#~ "`flat_map()`は`and_then()`に非常に似ていますが、クロージャが返さなければな"
+#~ "らないエラーの種類が異なります。ある出力を別のパーサーでより詳細に解析した"
+#~ "い場合には`flat_map()` を使ってください。(そのドキュメントを参照してくださ"
+#~ "い)"
+
+#, fuzzy
+#~ msgid ""
+#~ "`and_then()` takes an `error::StreamError` where as `flat_map()` takes an "
+#~ "`error::ParseError`."
+#~ msgstr ""
+#~ "`and_then()` は `error::StreamError` を受け取る一方、`flat_map()` は "
+#~ "`error::ParseError` を受け取ります。"
+
+#, fuzzy
+#~ msgid ""
+#~ "`and_then()` will add position information to the error automatically, "
+#~ "for `flat_map()` you have to take care of that yourself. You may need to "
+#~ "transform the position information."
+#~ msgstr ""
+#~ "`and_then()`は自動的にエラーに位置情報を追加しますが、`flat_map()` は注意"
+#~ "する必要があります。位置情報を追加するような変換が必要かもしれません。"
+
+#, fuzzy
+#~ msgid ""
+#~ "Then you can use one of the following combinators to collect multiple "
+#~ "occurrences of that element:"
+#~ msgstr ""
+#~ "次に、以下のコンビネーターのいずれかを使用して、その要素の複数の出現を集め"
+#~ "ます。"
+
+#, fuzzy
+#~ msgid ""
+#~ "- [`parser1.and(parser2)`][] is a shortcut for `(parser1, parser2)` - "
+#~ "[`choice::optional`][] can be helpful.  - [`repeat::escaped`][] helps "
+#~ "parsing escaped strings."
+#~ msgstr ""
+#~ "- [`parser1.and(parser2)`][] は `(parser1, parser2)`のショートカットで"
+#~ "す。 - [`choice::optional`][] は便利です。 - [`repeat::escaped`][] はエス"
+#~ "ケープ文字のパースに役立ちます。"
