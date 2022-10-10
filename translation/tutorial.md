@@ -75,7 +75,9 @@ let two_digits = (digit(), digit()); // Output = (char, char)
 
 タプルを使ってパーサーを連結するだけでは、出力が同じように大きなタプルになるためすぐに出力型が非常に複雑になります。幸いなことに、これを解決するためのいくつかの選択肢があります。
 
-- 出力された型をマッピングまたは加工することで、(不要な)部分を削除。(例): `let first_digit = (digit(), digit()).map(|(digit1, _digit2)| digit1);` (注意)：[`skip`][] や [`with`][] など、より表現力のあるヘルパーもあります： `let first_digit = digit().skip(digit());`
+- 出力された型をマッピングまたは加工することで、(不要な)部分を削除。
+  (例): `let first_digit = (digit(), digit()).map(|(digit1, _digit2)| digit1);`
+  (注意)：[`skip`][] や [`with`][] など、より表現力のあるヘルパーもあります： `let first_digit = digit().skip(digit());`
 - 繰り返しの要素を `Vec` などにまとめる。
 - 複雑な出力型を無視し、代わりに消費された `&str` スライスを取得。`let two_digits_str = recognize( (digit(), digit()) );`
 - (複雑な/再帰的な)出力タイプを組み立てる、例えば `json::Value` など。

@@ -1,3 +1,8 @@
+---
+title: Tutorial
+original_url: https://github.com/Marwes/combine/wiki/Tutorial
+---
+
 ## Code Structure
 
 `combine` is very flexible in regards to its data source and error handling but for the sake of keeping this tutorial simple I will assume that your input is `&str` and that you want extended error information. If you need another input source or want to customize the errors used, see the chapter "Inner Machinery" for all the options.
